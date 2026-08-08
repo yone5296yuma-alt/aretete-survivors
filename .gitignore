@@ -1,0 +1,12 @@
+server/node_modules/
+server/*.db
+server/*.db-journal
+server/*.sqlite
+server/.env
+server/server.log
+tools/_render_out/
+tools/_calibrate/
+tools/__pycache__/
+tools/cloudflared.exe
+tools/*.log
+tools/*.log.out

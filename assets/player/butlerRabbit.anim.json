@@ -1,0 +1,60 @@
+{
+  "frameW": 96,
+  "frameH": 96,
+  "clips": {
+    "idle": {
+      "frames": [
+        0,
+        1
+      ],
+      "fps": 3,
+      "loop": true
+    },
+    "walk": {
+      "frames": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "fps": 10,
+      "loop": true
+    },
+    "attack": {
+      "frames": [
+        6,
+        7,
+        8
+      ],
+      "fps": 12,
+      "loop": false
+    },
+    "hurt": {
+      "frames": [
+        9,
+        10
+      ],
+      "fps": 14,
+      "loop": false
+    },
+    "cheer": {
+      "frames": [
+        11,
+        12
+      ],
+      "fps": 6,
+      "loop": true
+    }
+  },
+  "variants": {
+    "enrage": {
+      "tint": "#ff2b4a",
+      "tintStrength": 0.4
+    },
+    "veteran": {
+      "tint": "#ffd76a",
+      "tintStrength": 0.28,
+      "scale": 1.15
+    }
+  }
+}

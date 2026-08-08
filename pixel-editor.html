@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2Dドット絵作成ツール - Are Tete Survivors</title>
+<style>
+  :root{
+    --bubble-blue:#7fe6a8; --deep-navy:#0e2016; --deep-navy2:#1c3324;
+    --gold:#ffd76a; --pink:#e7b8ff; --text-light:#eef6ff;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;min-height:100vh;font-family:"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;
+    background:radial-gradient(ellipse at 50% 0%, var(--deep-navy2), var(--deep-navy) 70%);
+    color:var(--text-light);padding:24px 16px 60px;
+  }
+  h1{text-align:center;color:var(--gold);font-size:1.4rem;margin-bottom:4px;}
+  p.sub{text-align:center;color:var(--pink);font-size:0.85rem;margin-top:0;margin-bottom:24px;}
+  .wrap{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;}
+  @media (max-width:840px){.wrap{grid-template-columns:1fr;}}
+  .panel{
+    background:rgba(14,32,22,0.85);border:2px solid rgba(255,255,255,0.15);
+    border-radius:16px;padding:18px 20px;
+  }
+  .field{margin-bottom:14px;}
+  label{display:block;font-size:0.8rem;color:#cfe3ff;margin-bottom:4px;}
+  input[type=text],input[type=number],select{
+    width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.25);
+    background:rgba(255,255,255,0.06);color:var(--text-light);font-size:0.95rem;
+  }
+  input[type=color]{width:44px;height:34px;border:none;background:none;padding:0;cursor:pointer;flex-shrink:0;}
+  .hint{font-size:0.7rem;color:#8fa89a;margin-top:3px;}
+  .btn{
+    display:block;width:100%;margin-top:10px;padding:11px;border-radius:999px;border:2px solid rgba(255,255,255,0.25);
+    background:rgba(255,255,255,0.08);color:var(--text-light);font-size:0.9rem;font-weight:600;cursor:pointer;
+  }
+  .btn-primary{background:linear-gradient(180deg,#ffe08a,var(--gold));color:#3a2600;border-color:#fff2c4;}
+  .btn:active{transform:scale(0.97);}
+  .btn-row{display:flex;gap:8px;}
+  .btn-row .btn{margin-top:0;}
+
+  /* ---- toolbar ---- */
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center;}
+  .tool-btn{
+    width:42px;height:42px;border-radius:10px;border:2px solid rgba(255,255,255,0.2);
+    background:rgba(255,255,255,0.06);font-size:1.2rem;cursor:pointer;color:var(--text-light);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .tool-btn.active{border-color:var(--gold);background:rgba(255,215,106,0.2);}
+  .tool-sep{width:1px;height:30px;background:rgba(255,255,255,0.15);margin:0 2px;}
+  .mini-btn{
+    padding:8px 12px;border-radius:8px;border:2px solid rgba(255,255,255,0.2);
+    background:rgba(255,255,255,0.06);color:var(--text-light);font-size:0.8rem;cursor:pointer;
+  }
+  .mini-btn.active{border-color:var(--gold);color:var(--gold);}
+
+  /* ---- canvas area ---- */
+  .canvas-stage{
+    display:flex;align-items:center;justify-content:center;padding:16px;
+    background:
+      linear-gradient(45deg,#2a2a2a 25%,transparent 25%),
+      linear-gradient(-45deg,#2a2a2a 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#2a2a2a 75%),
+      linear-gradient(-45deg,transparent 75%,#2a2a2a 75%);
+    background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0px;
+    background-color:#3a3a3a;border-radius:12px;overflow:auto;max-height:70vh;
+  }
+  #edit-canvas{image-rendering:pixelated;cursor:crosshair;touch-action:none;}
+
+  /* ---- palette ---- */
+  .palette-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-top:6px;}
+  .swatch{width:100%;aspect-ratio:1;border-radius:5px;border:2px solid rgba(255,255,255,0.25);cursor:pointer;padding:0;}
+  .swatch.active{border-color:#fff;box-shadow:0 0 0 2px var(--gold);}
+  .current-color-row{display:flex;gap:10px;align-items:center;margin-top:8px;}
+  .current-color-swatch{width:44px;height:34px;border-radius:8px;border:2px solid rgba(255,255,255,0.35);flex-shrink:0;}
+
+  .home-card{
+    width:76px;padding:6px;border-radius:10px;border:2px solid rgba(255,255,255,0.2);
+    background:rgba(255,255,255,0.05);cursor:pointer;text-align:center;
+  }
+  .home-card:hover{border-color:rgba(255,215,106,0.6);}
+  .home-card.best{border-color:var(--gold);box-shadow:0 0 8px rgba(255,215,106,0.4);}
+  .home-card canvas{width:100%;aspect-ratio:1;image-rendering:pixelated;border-radius:6px;background:#0b1a12;}
+  .home-card .hlabel{font-size:0.62rem;color:#cfe3ff;margin-top:4px;line-height:1.3;}
+  .home-card .hscore{font-size:0.58rem;color:var(--gold);}
+
+  .zoom-row{display:flex;align-items:center;gap:8px;}
+  .zoom-row input[type=range]{flex:1;}
+
+  .file-drop{
+    border:2px dashed rgba(255,255,255,0.3);border-radius:10px;padding:12px;text-align:center;
+    font-size:0.76rem;color:#cfe3ff;cursor:pointer;
+  }
+
+  .instructions{
+    max-width:1080px;margin:24px auto 0;background:rgba(255,255,255,0.05);border-radius:14px;
+    padding:16px 20px;font-size:0.82rem;line-height:1.75;
+  }
+  .instructions h2{color:var(--gold);font-size:1rem;margin-top:0;}
+  .instructions code{background:rgba(0,0,0,0.35);padding:1px 6px;border-radius:5px;font-size:0.85em;}
+</style>
+</head>
+<body>
+
+<h1>🎨 2Dドット絵作成ツール</h1>
+<p class="sub">敵キャラ・プレイヤー衣装・アイテムなどのドット絵を作って、そのままゲームに追加しよう</p>
+
+<div class="wrap">
+  <div class="panel">
+    <div class="toolbar">
+      <button class="tool-btn active" data-tool="pencil" title="ペン">✏️</button>
+      <button class="tool-btn" data-tool="eraser" title="消しゴム">🧽</button>
+      <button class="tool-btn" data-tool="bucket" title="塗りつぶし">🪣</button>
+      <button class="tool-btn" data-tool="eyedropper" title="スポイト">💧</button>
+      <div class="tool-sep"></div>
+      <button class="mini-btn" id="btn-mirror" title="左右対称に描画">↔️ 左右対称</button>
+      <button class="mini-btn active" id="btn-grid" title="マス目の表示">#️⃣ グリッド</button>
+      <div class="tool-sep"></div>
+      <button class="mini-btn" id="btn-undo">↩️ 元に戻す</button>
+      <button class="mini-btn" id="btn-redo">↪️ やり直す</button>
+      <div class="tool-sep"></div>
+      <button class="mini-btn" id="btn-clear">🗑️ 全消去</button>
+    </div>
+
+    <div class="zoom-row">
+      <span style="font-size:0.78rem;color:#cfe3ff;">拡大率</span>
+      <input type="range" id="zoom-slider" min="6" max="32" value="16">
+      <span style="font-size:0.78rem;color:#cfe3ff;" id="zoom-label">16px</span>
+    </div>
+
+    <div class="canvas-stage" style="margin-top:10px;">
+      <canvas id="edit-canvas"></canvas>
+      <canvas id="cutout-canvas" hidden></canvas>
+    </div>
+
+    <div id="cutout-controls" hidden style="margin-top:10px;">
+      <div class="hint">関節(点)をドラッグして人物の輪郭に合わせ、「太さ」で体の幅を調整してから切り抜いてください</div>
+      <div class="field" style="margin-top:8px;margin-bottom:8px;">
+        <label>太さ</label>
+        <input type="range" id="cutout-thickness" min="40" max="220" value="100">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-cutout-confirm" style="margin-top:0;">✂️ この形で切り抜いてドット化</button>
+        <button class="mini-btn" id="btn-cutout-cancel">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-col" style="display:flex;flex-direction:column;gap:20px;">
+  <div class="panel">
+    <div class="field">
+      <label>キャンバスサイズ</label>
+      <div class="btn-row">
+        <button class="mini-btn" data-size="16">16×16</button>
+        <button class="mini-btn active" data-size="32">32×32</button>
+        <button class="mini-btn" data-size="48">48×48</button>
+        <button class="mini-btn" data-size="64">64×64</button>
+      </div>
+      <div class="hint">プレイヤー衣装・敵キャラの見た目は32×32、タイル/アイコン類も32×32が目安です</div>
+    </div>
+
+    <div class="field">
+      <label>色</label>
+      <div class="current-color-row">
+        <div class="current-color-swatch" id="current-swatch"></div>
+        <input type="color" id="color-picker" value="#ffd76a">
+        <span style="font-size:0.75rem;color:#8fa89a;">クリックで選択中の色を変更</span>
+      </div>
+      <div class="palette-grid" id="palette-grid"></div>
+    </div>
+
+    <div class="field">
+      <label>画像を読み込む (写真・イラストもOK・既存素材の修正にも)</label>
+      <div class="file-drop" id="file-drop">クリックして画像を選択</div>
+      <input type="file" id="f-image" accept="image/png,image/jpeg,image/webp" style="display:none;">
+      <div class="field" style="margin-top:8px;margin-bottom:0;">
+        <label>読み込み方法</label>
+        <select id="f-import-mode">
+          <option value="pixelate" selected>自動ドット化する(画像全体をそのまま)</option>
+          <option value="cutout">人型で切り抜いてからドット化する(背景を除去)</option>
+          <option value="raw">そのまま読み込む(既存のドット絵の編集用)</option>
+        </select>
+      </div>
+      <div class="field" style="margin-top:8px;margin-bottom:0;">
+        <label>色数 (少ないほどドット絵らしくなります)</label>
+        <select id="f-palette-size">
+          <option value="8">8色</option>
+          <option value="16" selected>16色</option>
+          <option value="24">24色</option>
+          <option value="32">32色</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>ファイル名 (拡張子なし)</label>
+      <input type="text" id="f-filename" placeholder="例: myEnemy" value="pixelArt">
+    </div>
+
+    <div class="field">
+      <label>保存先の目安</label>
+      <select id="f-folder">
+        <option value="assets/enemies/">assets/enemies/ (敵キャラの見た目)</option>
+        <option value="assets/player/">assets/player/ (プレイヤー衣装の見た目)</option>
+        <option value="assets/tiles/">assets/tiles/ (地面・アイテムアイコン等・アニメ不要)</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" id="btn-download">🖼️ 静止画PNGをダウンロード</button>
+    <div class="hint" id="save-hint" style="margin-top:8px;text-align:center;"></div>
+  </div>
+
+  <div class="panel" id="motion-panel">
+    <label style="font-size:0.85rem;color:var(--gold);font-weight:700;">🦴 骨格モーション自動生成</label>
+    <p class="hint" style="margin-top:2px;">棒人間の骨格をキャラに合わせて配置すると、その骨格通りに歩行・待機・攻撃などのモーションが自動生成されます。敵キャラ・プレイヤー衣装用(タイル/アイコンには不要)</p>
+
+    <label style="font-size:0.78rem;color:#cfe3ff;margin-top:10px;">ホームポジション(基本姿勢)</label>
+    <p class="hint" style="margin-top:2px;">絵の元々のポーズ(直立・片手を上げている・腰に手を当てているなど)に近いものから始めると、モーション生成の仕上がりが良くなります。</p>
+    <button class="mini-btn" id="btn-diagnose-home" style="width:100%;padding:10px;">🔍 候補を診断してオススメ順に表示</button>
+    <div id="home-position-gallery" class="btn-row" style="margin-top:8px;flex-wrap:wrap;" hidden></div>
+
+    <button class="mini-btn" id="btn-toggle-skeleton" style="width:100%;padding:10px;margin-top:12px;">🦴 骨格編集モードにする</button>
+    <div class="btn-row" style="margin-top:8px;" id="skeleton-controls" hidden>
+      <button class="mini-btn" id="btn-reset-skeleton">↺ 骨格をリセット</button>
+    </div>
+    <div class="hint" id="skeleton-hint" style="margin-top:6px;" hidden>関節(点)をドラッグしてキャラの体に合わせてください。合わせ終わったら下のボタンでモーションを生成できます。</div>
+    <button class="btn btn-primary" id="btn-gen-motions" style="margin-top:10px;">🪄 骨格からモーションを生成</button>
+    <div class="btn-row" style="margin-top:10px;justify-content:center;" id="anim-preview-row" hidden>
+      <canvas id="anim-preview" width="96" height="96" style="image-rendering:pixelated;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:#0b1a12;"></canvas>
+    </div>
+    <div class="btn-row" id="anim-preview-controls" hidden style="margin-top:8px;flex-wrap:wrap;">
+      <button class="mini-btn active" data-clip="walk">歩行</button>
+      <button class="mini-btn" data-clip="idle">待機</button>
+      <button class="mini-btn" data-clip="attack">攻撃</button>
+      <button class="mini-btn" data-clip="hurt">被弾</button>
+      <button class="mini-btn" data-clip="cheer">喜び</button>
+    </div>
+    <button class="btn btn-primary" id="btn-download-sheet" disabled style="margin-top:10px;">🎞️ スプライトシート+JSONをダウンロード(2ファイル)</button>
+    <div class="hint" id="sheet-hint" style="margin-top:8px;text-align:center;"></div>
+  </div>
+  </div>
+</div>
+
+<div class="instructions">
+  <h2>使い方</h2>
+  <ol>
+    <li>ゼロから描く場合は右側でキャンバスサイズと色を選び、左側のキャンバスに描きます。写真やイラストがある場合は「画像を読み込む」の「読み込み方法」で選ぶだけで自動的にドット絵化されます(色数で粗さを調整可能)。背景が写り込んでいる写真は「人型で切り抜いてからドット化する」を選ぶと、関節をドラッグして人物の形に合わせるだけで背景を除去できます</li>
+    <li>「↔️ 左右対称」をONにすると、キャラクターなど左右対称な絵が描きやすくなります</li>
+    <li>敵キャラ・プレイヤー衣装として動かしたい場合は、絵が描けたら「🪄 歩行モーションを生成」を押すとアニメーションが自動生成され、その場でプレビューできます</li>
+    <li>アニメーション付きで使う場合は「🎞️ スプライトシート+JSONをダウンロード」、地面やアイコンなど動かない素材は「🖼️ 静止画PNGをダウンロード」を使います</li>
+    <li>ダウンロードしたファイルを、表示された保存先フォルダにそのまま置くと、次回サーバー再読み込み時にゲームへ自動で反映されます
+      (例: <code>assets/enemies/myEnemy.png</code> + <code>myEnemy.anim.json</code> は敵作成ツールで id を <code>myEnemy</code> にした敵キャラが、実際に歩いて動くようになります)</li>
+  </ol>
+  <p style="color:#ffb3b3;">※ 敵キャラとして追加したい場合は、このツールで画像を作ったあと「🎨 敵キャラを作る」ツール(enemy-creator.html)でパラメータ(HP・攻撃力など)のJSONも作成してください。</p>
+  <p style="color:#cfe3ff;">※ スプライトシートのJSONには「怒りモード」「歴戦モード」用の色調変化(variants)もあらかじめ入っています。今後それらのモードが実装された際、画像を作り直さなくてもそのまま使えるようになる予定です。</p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const PALETTE = [
+  '#000000', '#3a2600', '#8a6a4a', '#c98a4a', '#ffd76a', '#ffe6a8', '#ffffff', '#cfd8e0',
+  '#1c3324', '#3d7a4a', '#5fbf7a', '#7fe6a8', '#c7f0d0', '#a8d8b0', '#e8c15a', '#e8703f',
+  '#0e2016', '#8a1f2b', '#ff2b4a', '#e7b8ff', '#b98af0', '#c76bd6', '#bcd6ff', '#5ec8ff',
+  '#9fb8ff', '#a8a8a8', '#7a4a3a', '#d4af5a', '#eaf4ff', '#d6fff0', '#ffe08a', 'transparent',
+];
+
+let gridSize = 32;
+let cellPx = 16;
+let grid = null; // grid[y][x] = 'rgba(...)' string or null (transparent)
+let currentColor = '#ffd76a';
+let currentTool = 'pencil';
+let mirrorOn = false;
+let showGrid = true;
+let isDrawing = false;
+let undoStack = [];
+let redoStack = [];
+
+// ---------------------------------------------------------------------------
+// 2D skeleton rig: a stick-figure of 11 draggable joints / 10 bones. Pixels
+// are bound ("skinned") to whichever bone is nearest, in that bone's own
+// local coordinates - so posing the skeleton (rotating bones) drags the art
+// along with it, instead of the previous version's crude "shift the legs
+// sideways" approximation. Bone list order is a valid dependency order: each
+// bone's start joint ('a') is either the root 'hip' or another bone's end
+// joint ('b') that appears earlier in the list, which the FK solver below
+// relies on.
+// ---------------------------------------------------------------------------
+const BONE_DEFS = [
+  { name: 'spine', a: 'hip', b: 'chest' },
+  { name: 'neck', a: 'chest', b: 'head' },
+  { name: 'lUpperArm', a: 'chest', b: 'lElbow' },
+  { name: 'lLowerArm', a: 'lElbow', b: 'lHand' },
+  { name: 'rUpperArm', a: 'chest', b: 'rElbow' },
+  { name: 'rLowerArm', a: 'rElbow', b: 'rHand' },
+  { name: 'lThigh', a: 'hip', b: 'lKnee' },
+  { name: 'lShin', a: 'lKnee', b: 'lFoot' },
+  { name: 'rThigh', a: 'hip', b: 'rKnee' },
+  { name: 'rShin', a: 'rKnee', b: 'rFoot' },
+];
+// joint name -> index of the bone whose 'b' produces that joint (null for the root 'hip')
+const PARENT_BONE_OF = {};
+BONE_DEFS.forEach((bd, i) => { PARENT_BONE_OF[bd.b] = i; });
+
+let skeletonMode = false;
+let joints = null; // { jointName: {x, y} } in grid-cell space (fractional allowed)
+let draggingJoint = null;
+
+// A drawn character rarely starts in a neutral "arms at sides" pose - the
+// motion generator applies rotation *deltas* on top of whatever rest pose
+// the skeleton is given, so a mismatched home position (e.g. dragging a
+// standing-pose skeleton onto a character whose art already has one arm
+// raised) makes every generated frame drag the art into a nonsensical shape.
+// These presets are just different starting joint layouts to try instead of
+// forcing everything through one fixed "standing" template; legs are shared
+// across presets since arm pose rarely correlates with stance.
+const LEG_JOINTS = { lKnee: [0.40, 0.78], lFoot: [0.38, 0.98], rKnee: [0.60, 0.78], rFoot: [0.62, 0.98] };
+const HOME_POSITION_PRESETS = {
+  standing: {
+    label: '直立(気をつけ)',
+    arms: { lElbow: [0.28, 0.40], lHand: [0.20, 0.55], rElbow: [0.72, 0.40], rHand: [0.80, 0.55] },
+  },
+  rightArmUp: {
+    label: '右手を上げる',
+    arms: { lElbow: [0.28, 0.40], lHand: [0.20, 0.55], rElbow: [0.66, 0.22], rHand: [0.60, 0.06] },
+  },
+  leftArmUp: {
+    label: '左手を上げる',
+    arms: { lElbow: [0.34, 0.22], lHand: [0.40, 0.06], rElbow: [0.72, 0.40], rHand: [0.80, 0.55] },
+  },
+  handOnHipR: {
+    label: '右手を腰に',
+    arms: { lElbow: [0.28, 0.40], lHand: [0.20, 0.55], rElbow: [0.68, 0.42], rHand: [0.58, 0.52] },
+  },
+  handOnHipL: {
+    label: '左手を腰に',
+    arms: { lElbow: [0.32, 0.42], lHand: [0.42, 0.52], rElbow: [0.72, 0.40], rHand: [0.80, 0.55] },
+  },
+  guardStance: {
+    label: '両手を構える',
+    arms: { lElbow: [0.32, 0.36], lHand: [0.38, 0.20], rElbow: [0.68, 0.36], rHand: [0.62, 0.20] },
+  },
+};
+
+function buildJoints(n, presetKey) {
+  const preset = HOME_POSITION_PRESETS[presetKey] || HOME_POSITION_PRESETS.standing;
+  const P = (fx, fy) => ({ x: fx * n, y: fy * n });
+  const out = { hip: P(0.5, 0.55), chest: P(0.5, 0.32), head: P(0.5, 0.14) };
+  for (const name in preset.arms) out[name] = P(preset.arms[name][0], preset.arms[name][1]);
+  for (const name in LEG_JOINTS) out[name] = P(LEG_JOINTS[name][0], LEG_JOINTS[name][1]);
+  return out;
+}
+function defaultJoints(n) { return buildJoints(n, 'standing'); }
+
+function drawSkeletonOverlay() {
+  if (!skeletonMode || !joints) return;
+  ctx.save();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(94,200,255,0.9)';
+  for (const bd of BONE_DEFS) {
+    const A = joints[bd.a], B = joints[bd.b];
+    ctx.beginPath();
+    ctx.moveTo(A.x * cellPx, A.y * cellPx);
+    ctx.lineTo(B.x * cellPx, B.y * cellPx);
+    ctx.stroke();
+  }
+  for (const name in joints) {
+    const j = joints[name];
+    ctx.beginPath();
+    ctx.arc(j.x * cellPx, j.y * cellPx, 6, 0, Math.PI * 2);
+    ctx.fillStyle = name === draggingJoint ? '#ffd76a' : '#ffffff';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#0e2016';
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function jointAtCanvasPos(px, py) {
+  if (!joints) return null;
+  let best = null, bestD = 14; // px hit-radius in canvas space
+  for (const name in joints) {
+    const j = joints[name];
+    const d = Math.hypot(j.x * cellPx - px, j.y * cellPx - py);
+    if (d < bestD) { bestD = d; best = name; }
+  }
+  return best;
+}
+
+function makeEmptyGrid(n) {
+  return Array.from({ length: n }, () => new Array(n).fill(null));
+}
+
+function cloneGrid(g) {
+  return g.map(row => row.slice());
+}
+
+function pushUndo() {
+  undoStack.push(cloneGrid(grid));
+  if (undoStack.length > 40) undoStack.shift();
+  redoStack = [];
+}
+
+const canvas = $('edit-canvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+function resizeCanvasElement() {
+  canvas.width = gridSize * cellPx;
+  canvas.height = gridSize * cellPx;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      const c = grid[y][x];
+      if (c) {
+        ctx.fillStyle = c;
+        ctx.fillRect(x * cellPx, y * cellPx, cellPx, cellPx);
+      }
+    }
+  }
+  if (showGrid && cellPx >= 6) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= gridSize; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * cellPx + 0.5, 0);
+      ctx.lineTo(i * cellPx + 0.5, gridSize * cellPx);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i * cellPx + 0.5);
+      ctx.lineTo(gridSize * cellPx, i * cellPx + 0.5);
+      ctx.stroke();
+    }
+  }
+  drawSkeletonOverlay();
+}
+
+function setGridSize(n, preserve) {
+  const old = grid;
+  const oldSize = gridSize;
+  gridSize = n;
+  grid = makeEmptyGrid(n);
+  if (preserve && old) {
+    const m = Math.min(oldSize, n);
+    for (let y = 0; y < m; y++) for (let x = 0; x < m; x++) grid[y][x] = old[y][x];
+  }
+  if (joints && oldSize) {
+    // rescale existing rig proportionally instead of discarding the user's work
+    const scale = n / oldSize;
+    for (const name in joints) { joints[name].x *= scale; joints[name].y *= scale; }
+  }
+  resizeCanvasElement();
+  draw();
+}
+
+function canvasPosFromEvent(e) {
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    px: (clientX - rect.left) * (canvas.width / rect.width),
+    py: (clientY - rect.top) * (canvas.height / rect.height),
+  };
+}
+
+function cellFromEvent(e) {
+  const { px, py } = canvasPosFromEvent(e);
+  const x = Math.floor(px / cellPx);
+  const y = Math.floor(py / cellPx);
+  if (x < 0 || y < 0 || x >= gridSize || y >= gridSize) return null;
+  return { x, y };
+}
+
+function setPixel(x, y, color) {
+  grid[y][x] = color;
+  if (mirrorOn) {
+    const mx = gridSize - 1 - x;
+    grid[y][mx] = color;
+  }
+}
+
+function floodFill(x, y, target, replacement) {
+  if (target === replacement) return;
+  const stack = [[x, y]];
+  const seen = new Set();
+  while (stack.length) {
+    const [cx, cy] = stack.pop();
+    if (cx < 0 || cy < 0 || cx >= gridSize || cy >= gridSize) continue;
+    const key = cx + ',' + cy;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (grid[cy][cx] !== target) continue;
+    grid[cy][cx] = replacement;
+    if (mirrorOn) {
+      const mx = gridSize - 1 - cx;
+      grid[cy][mx] = replacement;
+    }
+    stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
+  }
+}
+
+function applyTool(x, y, isStart) {
+  if (currentTool === 'pencil') {
+    setPixel(x, y, currentColor);
+  } else if (currentTool === 'eraser') {
+    setPixel(x, y, null);
+  } else if (currentTool === 'bucket') {
+    if (!isStart) return; // only on click, not drag
+    floodFill(x, y, grid[y][x], currentColor);
+  } else if (currentTool === 'eyedropper') {
+    if (!isStart) return;
+    const c = grid[y][x];
+    if (c) {
+      currentColor = c;
+      $('color-picker').value = /^#/.test(c) ? c : '#ffd76a';
+      updateCurrentSwatch();
+    }
+  }
+  draw();
+}
+
+function updateCurrentSwatch() {
+  $('current-swatch').style.background = currentColor === 'transparent'
+    ? 'repeating-conic-gradient(#888 0% 25%, #bbb 0% 50%) 50% / 10px 10px'
+    : currentColor;
+}
+
+// ---- palette ----
+const paletteGrid = $('palette-grid');
+for (const c of PALETTE) {
+  const b = document.createElement('button');
+  b.className = 'swatch';
+  b.style.background = c === 'transparent'
+    ? 'repeating-conic-gradient(#888 0% 25%, #bbb 0% 50%) 50% / 8px 8px'
+    : c;
+  b.title = c;
+  b.onclick = () => {
+    currentColor = c;
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    b.classList.add('active');
+    updateCurrentSwatch();
+  };
+  paletteGrid.appendChild(b);
+}
+
+$('color-picker').addEventListener('input', (e) => {
+  currentColor = e.target.value;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  updateCurrentSwatch();
+});
+
+// ---- toolbar ----
+document.querySelectorAll('.tool-btn').forEach(btn => {
+  btn.onclick = () => {
+    currentTool = btn.dataset.tool;
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  };
+});
+
+$('btn-mirror').onclick = () => {
+  mirrorOn = !mirrorOn;
+  $('btn-mirror').classList.toggle('active', mirrorOn);
+};
+$('btn-grid').onclick = () => {
+  showGrid = !showGrid;
+  $('btn-grid').classList.toggle('active', showGrid);
+  draw();
+};
+$('btn-clear').onclick = () => {
+  if (!confirm('キャンバスを全て消去しますか？')) return;
+  pushUndo();
+  grid = makeEmptyGrid(gridSize);
+  draw();
+};
+$('btn-undo').onclick = () => {
+  if (!undoStack.length) return;
+  redoStack.push(cloneGrid(grid));
+  grid = undoStack.pop();
+  draw();
+};
+$('btn-redo').onclick = () => {
+  if (!redoStack.length) return;
+  undoStack.push(cloneGrid(grid));
+  grid = redoStack.pop();
+  draw();
+};
+
+document.querySelectorAll('[data-size]').forEach(btn => {
+  btn.onclick = () => {
+    const n = Number(btn.dataset.size);
+    if (grid && grid.some(row => row.some(c => c)) && !confirm('キャンバスサイズを変更すると絵の一部が消える場合があります。続けますか？')) return;
+    document.querySelectorAll('[data-size]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    pushUndo();
+    setGridSize(n, true);
+  };
+});
+
+$('zoom-slider').addEventListener('input', (e) => {
+  cellPx = Number(e.target.value);
+  $('zoom-label').textContent = cellPx + 'px';
+  resizeCanvasElement();
+  draw();
+});
+
+// ---- drawing interaction (skeleton-drag takes over the canvas while active) ----
+function pointerDown(e) {
+  e.preventDefault();
+  if (skeletonMode) {
+    const { px, py } = canvasPosFromEvent(e);
+    draggingJoint = jointAtCanvasPos(px, py);
+    draw();
+    return;
+  }
+  const cell = cellFromEvent(e);
+  if (!cell) return;
+  pushUndo();
+  isDrawing = true;
+  applyTool(cell.x, cell.y, true);
+}
+function pointerMove(e) {
+  if (skeletonMode) {
+    if (!draggingJoint) return;
+    e.preventDefault();
+    const { px, py } = canvasPosFromEvent(e);
+    joints[draggingJoint].x = clampNum(px / cellPx, 0, gridSize);
+    joints[draggingJoint].y = clampNum(py / cellPx, 0, gridSize);
+    draw();
+    return;
+  }
+  if (!isDrawing) return;
+  e.preventDefault();
+  const cell = cellFromEvent(e);
+  if (!cell) return;
+  applyTool(cell.x, cell.y, false);
+}
+function pointerUp() { isDrawing = false; draggingJoint = null; }
+function clampNum(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+canvas.addEventListener('mousedown', pointerDown);
+canvas.addEventListener('mousemove', pointerMove);
+window.addEventListener('mouseup', pointerUp);
+canvas.addEventListener('touchstart', pointerDown, { passive: false });
+canvas.addEventListener('touchmove', pointerMove, { passive: false });
+window.addEventListener('touchend', pointerUp);
+
+// ---- auto-pixelate: photo/illustration -> quantized pixel-art grid ----
+// 1) center-crop to square, 2) downscale in halving steps with smoothing
+//    (much less noisy than a single big nearest-neighbor jump), 3) k-means
+//    color quantization down to a small palette (real photos have thousands
+//    of near-duplicate colors; pixel art needs a handful of flat ones).
+function cropToSquareCanvas(img) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const s = Math.min(w, h);
+  const out = document.createElement('canvas');
+  out.width = s; out.height = s;
+  out.getContext('2d').drawImage(img, (w - s) / 2, (h - s) / 2, s, s, 0, 0, s, s);
+  return out;
+}
+// Pads (never crops) to square - used for the cutout flow, where the source
+// is already tightly cropped to the character's own bounding box, so a
+// center-square CROP could slice off a head or feet on a tall/narrow figure.
+function padToSquareCanvas(img) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const s = Math.max(w, h);
+  const out = document.createElement('canvas');
+  out.width = s; out.height = s;
+  out.getContext('2d').drawImage(img, (s - w) / 2, (s - h) / 2);
+  return out;
+}
+function smoothDownscale(canvas, targetN) {
+  let cur = canvas;
+  while (cur.width > targetN * 2) {
+    const nw = Math.max(targetN, Math.floor(cur.width / 2));
+    const next = document.createElement('canvas');
+    next.width = nw; next.height = nw;
+    const nctx = next.getContext('2d');
+    nctx.imageSmoothingEnabled = true;
+    nctx.imageSmoothingQuality = 'high';
+    nctx.drawImage(cur, 0, 0, nw, nw);
+    cur = next;
+  }
+  const final = document.createElement('canvas');
+  final.width = targetN; final.height = targetN;
+  const fctx = final.getContext('2d');
+  fctx.imageSmoothingEnabled = true;
+  fctx.imageSmoothingQuality = 'high';
+  fctx.drawImage(cur, 0, 0, cur.width, cur.height, 0, 0, targetN, targetN);
+  return fctx.getImageData(0, 0, targetN, targetN);
+}
+function kMeansPalette(colors, k) {
+  if (colors.length <= k) return colors.map(c => c.slice());
+  let centers = [];
+  const used = new Set();
+  while (centers.length < k) {
+    const idx = Math.floor(Math.random() * colors.length);
+    if (used.has(idx)) continue;
+    used.add(idx);
+    centers.push(colors[idx].slice());
+  }
+  for (let iter = 0; iter < 6; iter++) {
+    const sums = centers.map(() => [0, 0, 0, 0]);
+    for (const p of colors) {
+      let best = 0, bestD = Infinity;
+      for (let i = 0; i < centers.length; i++) {
+        const c = centers[i];
+        const d = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2;
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      const s = sums[best];
+      s[0] += p[0]; s[1] += p[1]; s[2] += p[2]; s[3]++;
+    }
+    for (let i = 0; i < centers.length; i++) {
+      if (sums[i][3] > 0) centers[i] = [sums[i][0] / sums[i][3], sums[i][1] / sums[i][3], sums[i][2] / sums[i][3]];
+    }
+  }
+  return centers.map(c => c.map(Math.round));
+}
+function nearestPaletteColor(p, palette) {
+  let best = palette[0], bestD = Infinity;
+  for (const c of palette) {
+    const d = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2;
+    if (d < bestD) { bestD = d; best = c; }
+  }
+  return best;
+}
+function autoPixelate(img, n, paletteSize, squareMode = 'crop') {
+  const square = squareMode === 'pad' ? padToSquareCanvas(img) : cropToSquareCanvas(img);
+  const imgData = smoothDownscale(square, n);
+  const data = imgData.data;
+  const opaqueColors = [];
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] >= 40) opaqueColors.push([data[i], data[i + 1], data[i + 2]]);
+  }
+  const palette = opaqueColors.length ? kMeansPalette(opaqueColors, paletteSize) : [];
+  const out = makeEmptyGrid(n);
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const i = (y * n + x) * 4;
+      const a = data[i + 3];
+      if (a < 40) { out[y][x] = null; continue; }
+      const c = nearestPaletteColor([data[i], data[i + 1], data[i + 2]], palette);
+      out[y][x] = `rgb(${c[0]},${c[1]},${c[2]})`;
+    }
+  }
+  return out;
+}
+
+// ---- import image: auto-pixelate whole photo, human-shape cutout, or raw 1:1 read ----
+$('file-drop').onclick = () => $('f-image').click();
+$('f-image').onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      const mode = $('f-import-mode').value;
+      if (mode === 'cutout') { startCutout(img, file.name); return; }
+      pushUndo();
+      if (mode === 'pixelate') {
+        const n = gridSize; // pixelate into the currently selected canvas size
+        const paletteSize = Number($('f-palette-size').value);
+        grid = autoPixelate(img, n, paletteSize);
+        gridSize = n;
+      } else {
+        // raw 1:1 read, for touching up art that's already pixel-perfect
+        const n = Math.min(64, Math.max(img.width, img.height));
+        const off = document.createElement('canvas');
+        off.width = n; off.height = n;
+        const octx = off.getContext('2d');
+        octx.imageSmoothingEnabled = false;
+        octx.drawImage(img, 0, 0, n, n);
+        const data = octx.getImageData(0, 0, n, n).data;
+        gridSize = n;
+        grid = makeEmptyGrid(n);
+        for (let y = 0; y < n; y++) {
+          for (let x = 0; x < n; x++) {
+            const i = (y * n + x) * 4;
+            const a = data[i + 3];
+            grid[y][x] = a < 10 ? null : `rgba(${data[i]},${data[i + 1]},${data[i + 2]},${(a / 255).toFixed(2)})`;
+          }
+        }
+      }
+      document.querySelectorAll('[data-size]').forEach(b => b.classList.toggle('active', Number(b.dataset.size) === gridSize));
+      resizeCanvasElement();
+      draw();
+      $('file-drop').textContent = `読み込み済み: ${file.name}${mode === 'pixelate' ? ' (自動ドット化済み)' : ''}`;
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+// ---------------------------------------------------------------------------
+// Human-silhouette cutout: fit a draggable outline (the same 11-joint rig
+// used for animation, but here defining a thick body instead of thin bones)
+// over a loaded photo, then keep only the pixels inside it. Auto-pixelate
+// alone quantizes colors but never removes background - anything behind the
+// subject becomes part of the "character" and corrupts the skinning later.
+// This runs BEFORE auto-pixelation, on the full-resolution photo, so the
+// background is gone before color quantization ever sees it.
+// ---------------------------------------------------------------------------
+let cutoutImg = null;
+let cutoutJoints = null;
+let cutoutThickness = 1;
+let cutoutScale = 1;
+let draggingCutoutJoint = null;
+
+const cutoutCanvas = $('cutout-canvas');
+const cctx = cutoutCanvas.getContext('2d');
+
+function defaultCutoutJoints(w, h) {
+  const P = (fx, fy) => ({ x: fx * w, y: fy * h });
+  return {
+    hip: P(0.5, 0.55), chest: P(0.5, 0.32), head: P(0.5, 0.14),
+    lElbow: P(0.28, 0.40), lHand: P(0.20, 0.55),
+    rElbow: P(0.72, 0.40), rHand: P(0.80, 0.55),
+    lKnee: P(0.40, 0.78), lFoot: P(0.38, 0.98),
+    rKnee: P(0.60, 0.78), rFoot: P(0.62, 0.98),
+  };
+}
+// base capsule radius per bone, as a fraction of min(photoW, photoH) - torso
+// noticeably thicker than limbs, purely a reasonable starting guess since
+// the thickness slider and joint dragging are the real fitting tools.
+const CUTOUT_BASE_RADIUS_FRAC = {
+  spine: 0.11, neck: 0.075, lUpperArm: 0.05, lLowerArm: 0.042, rUpperArm: 0.05, rLowerArm: 0.042,
+  lThigh: 0.065, lShin: 0.05, rThigh: 0.065, rShin: 0.05,
+};
+
+function startCutout(img) {
+  cutoutImg = img;
+  const maxDim = 480;
+  cutoutScale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+  cutoutCanvas.width = Math.max(1, Math.round(img.naturalWidth * cutoutScale));
+  cutoutCanvas.height = Math.max(1, Math.round(img.naturalHeight * cutoutScale));
+  cutoutJoints = defaultCutoutJoints(img.naturalWidth, img.naturalHeight);
+  cutoutThickness = 1;
+  $('cutout-thickness').value = 100;
+  $('edit-canvas').hidden = true;
+  cutoutCanvas.hidden = false;
+  $('cutout-controls').hidden = false;
+  drawCutout();
+}
+function endCutout() {
+  cutoutImg = null;
+  cutoutJoints = null;
+  $('edit-canvas').hidden = false;
+  cutoutCanvas.hidden = true;
+  $('cutout-controls').hidden = true;
+}
+
+function drawCutout() {
+  if (!cutoutImg) return;
+  cctx.clearRect(0, 0, cutoutCanvas.width, cutoutCanvas.height);
+  cctx.drawImage(cutoutImg, 0, 0, cutoutCanvas.width, cutoutCanvas.height);
+  const minDim = Math.min(cutoutImg.naturalWidth, cutoutImg.naturalHeight);
+  cctx.save();
+  cctx.lineCap = 'round';
+  for (const bd of BONE_DEFS) {
+    const A = cutoutJoints[bd.a], B = cutoutJoints[bd.b];
+    const r = CUTOUT_BASE_RADIUS_FRAC[bd.name] * minDim * cutoutThickness * cutoutScale;
+    cctx.globalAlpha = 0.35;
+    cctx.strokeStyle = '#5ec8ff';
+    cctx.lineWidth = r * 2;
+    cctx.beginPath();
+    cctx.moveTo(A.x * cutoutScale, A.y * cutoutScale);
+    cctx.lineTo(B.x * cutoutScale, B.y * cutoutScale);
+    cctx.stroke();
+  }
+  cctx.globalAlpha = 1;
+  cctx.lineCap = 'butt';
+  cctx.lineWidth = 2;
+  cctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  for (const bd of BONE_DEFS) {
+    const A = cutoutJoints[bd.a], B = cutoutJoints[bd.b];
+    cctx.beginPath();
+    cctx.moveTo(A.x * cutoutScale, A.y * cutoutScale);
+    cctx.lineTo(B.x * cutoutScale, B.y * cutoutScale);
+    cctx.stroke();
+  }
+  for (const name in cutoutJoints) {
+    const j = cutoutJoints[name];
+    cctx.beginPath();
+    cctx.arc(j.x * cutoutScale, j.y * cutoutScale, 6, 0, Math.PI * 2);
+    cctx.fillStyle = name === draggingCutoutJoint ? '#ffd76a' : '#ffffff';
+    cctx.fill();
+    cctx.lineWidth = 2;
+    cctx.strokeStyle = '#0e2016';
+    cctx.stroke();
+  }
+  cctx.restore();
+}
+
+function cutoutPosFromEvent(e) {
+  const rect = cutoutCanvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    px: (clientX - rect.left) * (cutoutCanvas.width / rect.width),
+    py: (clientY - rect.top) * (cutoutCanvas.height / rect.height),
+  };
+}
+function cutoutJointAt(px, py) {
+  let best = null, bestD = 16;
+  for (const name in cutoutJoints) {
+    const j = cutoutJoints[name];
+    const d = Math.hypot(j.x * cutoutScale - px, j.y * cutoutScale - py);
+    if (d < bestD) { bestD = d; best = name; }
+  }
+  return best;
+}
+function cutoutPointerDown(e) {
+  if (!cutoutImg) return;
+  e.preventDefault();
+  const { px, py } = cutoutPosFromEvent(e);
+  draggingCutoutJoint = cutoutJointAt(px, py);
+  drawCutout();
+}
+function cutoutPointerMove(e) {
+  if (!draggingCutoutJoint) return;
+  e.preventDefault();
+  const { px, py } = cutoutPosFromEvent(e);
+  cutoutJoints[draggingCutoutJoint].x = clampNum(px / cutoutScale, 0, cutoutImg.naturalWidth);
+  cutoutJoints[draggingCutoutJoint].y = clampNum(py / cutoutScale, 0, cutoutImg.naturalHeight);
+  drawCutout();
+}
+function cutoutPointerUp() { draggingCutoutJoint = null; }
+cutoutCanvas.addEventListener('mousedown', cutoutPointerDown);
+cutoutCanvas.addEventListener('mousemove', cutoutPointerMove);
+window.addEventListener('mouseup', cutoutPointerUp);
+cutoutCanvas.addEventListener('touchstart', cutoutPointerDown, { passive: false });
+cutoutCanvas.addEventListener('touchmove', cutoutPointerMove, { passive: false });
+window.addEventListener('touchend', cutoutPointerUp);
+
+$('cutout-thickness').addEventListener('input', (e) => {
+  cutoutThickness = Number(e.target.value) / 100;
+  drawCutout();
+});
+$('btn-cutout-cancel').onclick = endCutout;
+
+$('btn-cutout-confirm').onclick = () => {
+  const w = cutoutImg.naturalWidth, h = cutoutImg.naturalHeight;
+  const src = document.createElement('canvas');
+  src.width = w; src.height = h;
+  src.getContext('2d').drawImage(cutoutImg, 0, 0);
+  const srcData = src.getContext('2d').getImageData(0, 0, w, h);
+
+  // rasterize the capsule outline at full photo resolution as an alpha mask
+  const maskCanvas = document.createElement('canvas');
+  maskCanvas.width = w; maskCanvas.height = h;
+  const mctx = maskCanvas.getContext('2d');
+  mctx.lineCap = 'round';
+  mctx.strokeStyle = '#fff';
+  const minDim = Math.min(w, h);
+  for (const bd of BONE_DEFS) {
+    const A = cutoutJoints[bd.a], B = cutoutJoints[bd.b];
+    mctx.lineWidth = CUTOUT_BASE_RADIUS_FRAC[bd.name] * minDim * cutoutThickness * 2;
+    mctx.beginPath();
+    mctx.moveTo(A.x, A.y);
+    mctx.lineTo(B.x, B.y);
+    mctx.stroke();
+  }
+  const maskData = mctx.getImageData(0, 0, w, h).data;
+
+  const masked = new ImageData(w, h);
+  let minX = w, maxX = -1, minY = h, maxY = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (maskData[i + 3] <= 10) continue;
+      masked.data[i] = srcData.data[i];
+      masked.data[i + 1] = srcData.data[i + 1];
+      masked.data[i + 2] = srcData.data[i + 2];
+      masked.data[i + 3] = 255;
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+  }
+  if (maxX < minX) { alert('切り抜き範囲が見つかりませんでした。関節や太さを調整してください。'); return; }
+
+  const maskedCanvas = document.createElement('canvas');
+  maskedCanvas.width = w; maskedCanvas.height = h;
+  maskedCanvas.getContext('2d').putImageData(masked, 0, 0);
+
+  const pad = Math.round(minDim * 0.03);
+  const cx0 = Math.max(0, minX - pad), cy0 = Math.max(0, minY - pad);
+  const cw = Math.min(w, maxX + pad) - cx0, ch = Math.min(h, maxY + pad) - cy0;
+  const cropCanvas = document.createElement('canvas');
+  cropCanvas.width = cw; cropCanvas.height = ch;
+  cropCanvas.getContext('2d').drawImage(maskedCanvas, cx0, cy0, cw, ch, 0, 0, cw, ch);
+
+  const croppedImg = new Image();
+  croppedImg.onload = () => {
+    pushUndo();
+    const n = gridSize;
+    const paletteSize = Number($('f-palette-size').value);
+    grid = autoPixelate(croppedImg, n, paletteSize, 'pad');
+    gridSize = n;
+    endCutout();
+    document.querySelectorAll('[data-size]').forEach(b => b.classList.toggle('active', Number(b.dataset.size) === n));
+    resizeCanvasElement();
+    draw();
+    $('file-drop').textContent = '読み込み済み: 人型で切り抜き済み';
+  };
+  croppedImg.src = cropCanvas.toDataURL();
+};
+
+// ---------------------------------------------------------------------------
+// Skeleton-driven motion generation. Real forward-kinematics, not a canned
+// shift: each bone gets a rotation delta per keyframe, the FK solver below
+// resolves every joint's world position through the hierarchy, and every
+// pixel that was bound ("skinned") to a bone in bindPixelsToSkeleton() is
+// re-projected from that bone's *current* rotated position/orientation.
+// Rotating the skeleton genuinely drags the art with it.
+// ---------------------------------------------------------------------------
+function toggleSkeletonMode(on) {
+  skeletonMode = on;
+  if (on && !joints) joints = defaultJoints(gridSize);
+  $('btn-toggle-skeleton').classList.toggle('active', on);
+  $('btn-toggle-skeleton').textContent = on ? '🦴 骨格編集モードを終了' : '🦴 骨格編集モードにする';
+  $('skeleton-controls').hidden = !on;
+  $('skeleton-hint').hidden = !on;
+  draw();
+}
+$('btn-toggle-skeleton').onclick = () => toggleSkeletonMode(!skeletonMode);
+$('btn-reset-skeleton').onclick = () => {
+  if (!confirm('骨格を初期位置に戻しますか？')) return;
+  joints = defaultJoints(gridSize);
+  draw();
+};
+
+function rotateVec(v, deg) {
+  const r = (deg * Math.PI) / 180;
+  const c = Math.cos(r), s = Math.sin(r);
+  return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
+}
+
+// Rigid skinning: every opaque pixel is bound to whichever bone segment it's
+// nearest to, stored as (along, perp) in that bone's own rest-pose local
+// frame - so it can be re-projected onto the bone's posed frame later. While
+// binding, also measure each bone's actual thickness (how far its farthest
+// pixel sits from the segment) and its dominant color - these feed the
+// "fleshed-out mannequin" capsule used by renderPoseFrame below.
+function distToSegment(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy || 1e-6;
+  let t = ((px - ax) * dx + (py - ay) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function bindPixelsToSkeleton(g, n, restJoints) {
+  const map = Array.from({ length: n }, () => new Array(n).fill(null));
+  const perpSamples = BONE_DEFS.map(() => []);
+  const colorCounts = BONE_DEFS.map(() => new Map());
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if (!g[y][x]) continue;
+      const cx = x + 0.5, cy = y + 0.5;
+      let best = 0, bestD = Infinity;
+      for (let bi = 0; bi < BONE_DEFS.length; bi++) {
+        const bd = BONE_DEFS[bi];
+        const A = restJoints[bd.a], B = restJoints[bd.b];
+        const d = distToSegment(cx, cy, A.x, A.y, B.x, B.y);
+        if (d < bestD) { bestD = d; best = bi; }
+      }
+      const bd = BONE_DEFS[best];
+      const A = restJoints[bd.a], B = restJoints[bd.b];
+      const dx = B.x - A.x, dy = B.y - A.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len, uy = dy / len, pxu = -uy, pyu = ux;
+      const rx = cx - A.x, ry = cy - A.y;
+      const perp = rx * pxu + ry * pyu;
+      map[y][x] = { bone: best, along: rx * ux + ry * uy, perp, dist: bestD };
+      perpSamples[best].push(Math.abs(perp));
+      colorCounts[best].set(g[y][x], (colorCounts[best].get(g[y][x]) || 0) + 1);
+    }
+  }
+  // Capsule radius per bone, from the 85th percentile of |perp| among pixels
+  // actually bound to it - NOT the max. Nearest-segment (Voronoi) binding
+  // near a joint is noisy: a few torso pixels next to the hip can end up
+  // assigned to a thigh bone simply because that bone's segment is closer
+  // there than the spine's is, even though those pixels are torso, not leg.
+  // Using the single farthest such outlier as "this bone's thickness" (an
+  // earlier version did) let a handful of mis-assigned pixels balloon the
+  // capsule to 2-3x the real limb width. A percentile shrugs off that noise
+  // while still covering the limb's actual bulk.
+  const radius = perpSamples.map(arr => {
+    if (!arr.length) return 1.2;
+    arr.sort((a, b) => a - b);
+    const p85 = arr[Math.floor(arr.length * 0.85)] ?? arr[arr.length - 1];
+    return Math.max(1.2, p85 * 1.05);
+  });
+  const color = colorCounts.map(counts => {
+    let best = null, bestN = 0;
+    for (const [c, n] of counts) if (n > bestN) { bestN = n; best = c; }
+    return best;
+  });
+  return { map, radius, color };
+}
+
+// Forward kinematics: given per-bone rotation deltas (degrees, relative to
+// rest pose), resolve every joint's world position. BONE_DEFS is already in
+// dependency order (each bone's 'a' joint is the root or an earlier bone's
+// 'b'), so a single pass suffices.
+function solvePose(restJoints, boneDeltas) {
+  const world = { hip: { x: restJoints.hip.x, y: restJoints.hip.y } };
+  const cum = {};
+  BONE_DEFS.forEach((bd, i) => {
+    const parentBoneIdx = PARENT_BONE_OF[bd.a];
+    const parentCum = parentBoneIdx !== undefined ? cum[parentBoneIdx] : 0;
+    cum[i] = parentCum + (boneDeltas[bd.name] || 0);
+    const restVec = { x: restJoints[bd.b].x - restJoints[bd.a].x, y: restJoints[bd.b].y - restJoints[bd.a].y };
+    const rotVec = rotateVec(restVec, cum[i]);
+    const A = world[bd.a];
+    world[bd.b] = { x: A.x + rotVec.x, y: A.y + rotVec.y };
+  });
+  return world;
+}
+
+function boneFrame(A, B) {
+  const dx = B.x - A.x, dy = B.y - A.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { A, ux: dx / len, uy: dy / len, pxu: -dy / len, pyu: dx / len };
+}
+
+// Renders one posed frame via BACKWARD mapping (inverse sampling): for every
+// destination pixel, ask "what rest-pose pixel lands here once this bone is
+// posed?" and sample it. This never invents art - it can only place pixels
+// that genuinely exist in the drawing, so the result never balloons past the
+// original silhouette (an earlier "capsule mannequin" version traded gaps
+// for exactly that problem: it inflated the character to 2x+ its real size,
+// because a bone's measured thickness gets corrupted by the handful of
+// pixels that Voronoi-binding misassigns near a joint, e.g. a torso corner
+// ending up "closest" to a thigh bone). Whatever gaps remain after this
+// precise pass are handled by fillSmallGaps below, which fixes them without
+// that inflation risk.
+function renderPoseFrame(g, n, restJoints, bind, boneDeltas) {
+  const world = solvePose(restJoints, boneDeltas);
+  const out = makeEmptyGrid(n);
+  for (let bi = 0; bi < BONE_DEFS.length; bi++) {
+    const bd = BONE_DEFS[bi];
+    const rf = boneFrame(restJoints[bd.a], restJoints[bd.b]);
+    const pf = boneFrame(world[bd.a], world[bd.b]);
+    for (let dy = 0; dy < n; dy++) {
+      for (let dx = 0; dx < n; dx++) {
+        const ddx = dx + 0.5 - pf.A.x, ddy = dy + 0.5 - pf.A.y;
+        const along = ddx * pf.ux + ddy * pf.uy;
+        const perp = ddx * pf.pxu + ddy * pf.pyu;
+        const sx = Math.floor(rf.A.x + along * rf.ux + perp * rf.pxu);
+        const sy = Math.floor(rf.A.y + along * rf.uy + perp * rf.pyu);
+        if (sx < 0 || sy < 0 || sx >= n || sy >= n) continue;
+        const b = bind.map[sy][sx];
+        if (!b || b.bone !== bi || !g[sy][sx]) continue;
+        out[dy][dx] = g[sy][sx];
+      }
+    }
+  }
+  return out;
+}
+
+// A bone's precise samples can end up nowhere near its neighbor's once a
+// joint bends far enough (a forearm rotated -55deg while the upper arm
+// barely moved, say) - each bone is individually rendered correctly, but
+// nothing forces two consecutive bones' pixels to stay visually touching at
+// their shared joint, so a hand can appear to tear off into its own
+// floating island under a large-angle pose. fillSmallGaps alone doesn't
+// catch this: the resulting empty stretch between the pieces is both way
+// bigger than a torn-seam-sized gap AND open to the background, so it reads
+// as legitimate negative space, not a defect.
+// This draws a thin (radius ~1.4px) guaranteed-connected stroke along every
+// bone's own posed segment, using that bone's dominant color, but only into
+// cells the precise pass left empty - it never overwrites real sampled art,
+// it just keeps the "core" of every limb continuous from joint to joint no
+// matter how extreme the rotation.
+function connectJoints(out, n, world, bind) {
+  const LINE_R = 1.4;
+  for (let bi = 0; bi < BONE_DEFS.length; bi++) {
+    const bd = BONE_DEFS[bi];
+    const color = bind.color[bi];
+    if (!color) continue;
+    const A = world[bd.a], B = world[bd.b];
+    const minX = Math.max(0, Math.floor(Math.min(A.x, B.x) - LINE_R));
+    const maxX = Math.min(n - 1, Math.ceil(Math.max(A.x, B.x) + LINE_R));
+    const minY = Math.max(0, Math.floor(Math.min(A.y, B.y) - LINE_R));
+    const maxY = Math.min(n - 1, Math.ceil(Math.max(A.y, B.y) + LINE_R));
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        if (out[y][x]) continue;
+        if (distToSegment(x + 0.5, y + 0.5, A.x, A.y, B.x, B.y) <= LINE_R) out[y][x] = color;
+      }
+    }
+  }
+}
+
+// Patches small transparent pockets - whether fully enclosed or notched open
+// to the edge of the silhouette (a joint bend tearing the art at a seam is
+// the main source of the latter) - with the nearest bone's own color.
+//
+// Two different rules for two different cases, both handled in one pass:
+//  - A region that never touches the canvas border (checked via
+//    floodReachFromBorder) is, by definition, fully enclosed inside the
+//    character - that can't be intentional negative space (real silhouette
+//    concavities like an armpit or a spread crotch are always open to the
+//    outside), so it's filled unconditionally, at any size.
+//  - A region that DOES touch the border is ambiguous: it might be a torn
+//    seam that happens to break open to the edge, or it might be genuine
+//    background/a real silhouette gap. Size is the tiebreaker there - a
+//    torn seam is a handful of pixels; a real gap is much bigger - so only
+//    small border-connected regions get patched.
+function fillSmallGaps(g, n, restJoints, boneDeltas, bind) {
+  const world = solvePose(restJoints, boneDeltas);
+  const boneSegs = BONE_DEFS.map(bd => ({ A: world[bd.a], B: world[bd.b] }));
+  const SMALL = Math.max(4, Math.round(n * 0.12));
+  const reached = floodReachFromBorder(g, n);
+  const visited = Array.from({ length: n }, () => new Array(n).fill(false));
+  const out = g.map(row => row.slice());
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if (g[y][x] || visited[y][x]) continue;
+      const touchesBorder = reached[y][x];
+      const cells = [[x, y]];
+      visited[y][x] = true;
+      for (let i = 0; i < cells.length; i++) {
+        const [cx, cy] = cells[i];
+        for (const [dx, dy] of NEIGHBORS_8) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < 0 || ny < 0 || nx >= n || ny >= n || visited[ny][nx] || g[ny][nx]) continue;
+          visited[ny][nx] = true;
+          cells.push([nx, ny]);
+        }
+      }
+      if (touchesBorder && cells.length > SMALL) continue; // real background / legitimate gap
+      for (const [cx, cy] of cells) {
+        let best = 0, bestD = Infinity;
+        for (let bi = 0; bi < boneSegs.length; bi++) {
+          const { A, B } = boneSegs[bi];
+          const d = distToSegment(cx + 0.5, cy + 0.5, A.x, A.y, B.x, B.y);
+          if (d < bestD) { bestD = d; best = bi; }
+        }
+        if (bind.color[best]) out[cy][cx] = bind.color[best];
+      }
+    }
+  }
+  return out;
+}
+
+// Final safety net: connectJoints assumes the rig's bone segment is a decent
+// stand-in for where the art actually is, but a limb whose real pixels sit
+// well off that line (a thick hand, or a skeleton that isn't perfectly
+// fitted to the drawing) can still end up as its own disconnected island -
+// exactly the "hand floats away from the arm" symptom. This doesn't reason
+// about bones at all: it finds every connected group of opaque pixels, and
+// for any group that isn't part of the largest one, draws a straight line
+// of pixels from its closest point to the main body's closest point. It's a
+// blunt guarantee - "the character is always one connected shape" - applied
+// last, after every more targeted repair has already run.
+function bridgeDisconnectedIslands(g, n) {
+  const visited = Array.from({ length: n }, () => new Array(n).fill(false));
+  const comps = [];
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if (!g[y][x] || visited[y][x]) continue;
+      const cells = [[x, y]];
+      visited[y][x] = true;
+      for (let i = 0; i < cells.length; i++) {
+        const [cx, cy] = cells[i];
+        for (const [dx, dy] of NEIGHBORS_8) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < 0 || ny < 0 || nx >= n || ny >= n || visited[ny][nx] || !g[ny][nx]) continue;
+          visited[ny][nx] = true;
+          cells.push([nx, ny]);
+        }
+      }
+      comps.push(cells);
+    }
+  }
+  if (comps.length <= 1) return g;
+  comps.sort((a, b) => b.length - a.length);
+  const out = g.map(row => row.slice());
+  const main = comps[0];
+  for (let ci = 1; ci < comps.length; ci++) {
+    const island = comps[ci];
+    let bestD = Infinity, ix = 0, iy = 0, mx = 0, my = 0;
+    for (const [px, py] of island) {
+      for (const [qx, qy] of main) {
+        const d = (px - qx) ** 2 + (py - qy) ** 2;
+        if (d < bestD) { bestD = d; ix = px; iy = py; mx = qx; my = qy; }
+      }
+    }
+    const bridgeColor = out[iy][ix];
+    let x0 = mx, y0 = my;
+    const dx = Math.abs(ix - x0), dy = -Math.abs(iy - y0);
+    const sx = x0 < ix ? 1 : -1, sy = y0 < iy ? 1 : -1;
+    let err = dx + dy;
+    while (true) {
+      if (!out[y0][x0]) out[y0][x0] = bridgeColor;
+      if (x0 === ix && y0 === iy) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x0 += sx; }
+      if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Pose targeting by ABSOLUTE screen angle, not guessed relative deltas.
+// An earlier version picked delta degrees like "rUpperArm: 65" by feel, and
+// two real bugs came from that: (1) attack's upper-arm + forearm deltas
+// compounded past 90 degrees, so the forearm's absolute direction flipped to
+// point back across the body - "the right hand strikes the left side"; (2) a
+// cheer delta had the wrong sign relative to that bone's actual rest angle,
+// so "raise the arm" instead rotated it toward pointing down - the character
+// looked like it was folding up instead of celebrating. Both mistakes are
+// what happens when you reason about a rotation *delta* without first
+// checking the geometry it's being applied to.
+// poseFromAngles sidesteps this: you say what direction a bone should
+// ultimately point in (0=right, 90=down, -90=up, 180=left, same convention
+// rotateVec already uses), and it works out the correct relative delta from
+// whatever the rig's actual rest angle is - correct regardless of the
+// specific rig's proportions or which HOME_POSITION_PRESET was used.
+// ---------------------------------------------------------------------------
+function boneRestAngle(joints, boneName) {
+  const bd = BONE_DEFS.find(b => b.name === boneName);
+  const A = joints[bd.a], B = joints[bd.b];
+  return (Math.atan2(B.y - A.y, B.x - A.x) * 180) / Math.PI;
+}
+function poseFromAngles(joints, absoluteAngles) {
+  const cum = {};
+  const deltas = {};
+  for (const bd of BONE_DEFS) {
+    const parentBoneIdx = PARENT_BONE_OF[bd.a];
+    const parentCum = parentBoneIdx !== undefined ? cum[BONE_DEFS[parentBoneIdx].name] : 0;
+    if (bd.name in absoluteAngles) {
+      let targetCum = absoluteAngles[bd.name] - boneRestAngle(joints, bd.name);
+      while (targetCum > 180) targetCum -= 360;
+      while (targetCum <= -180) targetCum += 360;
+      deltas[bd.name] = targetCum - parentCum;
+      cum[bd.name] = targetCum;
+    } else {
+      deltas[bd.name] = 0;
+      cum[bd.name] = parentCum;
+    }
+  }
+  return deltas;
+}
+function mergeDeltas(a, b) {
+  const out = { ...a };
+  for (const k in b) out[k] = (out[k] || 0) + b[k];
+  return out;
+}
+function lerpPose(a, b, t) {
+  const out = {};
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) out[k] = (a[k] || 0) + ((b[k] || 0) - (a[k] || 0)) * t;
+  return out;
+}
+function samplesFor(n, fn) { return Array.from({ length: n }, (_, i) => fn(i / n)); }
+function keyframeFrames(keyframes, n) {
+  const segs = keyframes.length - 1;
+  return Array.from({ length: n }, (_, i) => {
+    const t = (i / (n - 1)) * segs;
+    const seg = Math.min(segs - 1, Math.floor(t));
+    return lerpPose(keyframes[seg], keyframes[seg + 1], t - seg);
+  });
+}
+
+// Each generator takes the CURRENT rest joints (so it adapts to whatever the
+// user actually rigged, not a hardcoded "standing" assumption) and returns
+// one delta-object per physical frame. Walk/idle stay relative-delta phase
+// oscillations (a wobble around rest, not a fixed target pose, so there's no
+// "which absolute direction" question to get wrong). Attack/cheer target
+// explicit absolute angles for the arms specifically, since those are the
+// bones where a wrong direction reads as a broken pose instead of just a
+// slightly-off one.
+function walkFrames(joints, n) {
+  return samplesFor(n, (t) => {
+    const p = t * Math.PI * 2;
+    return {
+      lThigh: 26 * Math.sin(p), rThigh: -26 * Math.sin(p),
+      lShin: Math.max(0, -16 * Math.sin(p + 0.7)), rShin: Math.max(0, -16 * Math.sin(p + Math.PI + 0.7)),
+      lUpperArm: -18 * Math.sin(p), rUpperArm: 18 * Math.sin(p),
+      spine: 3 * Math.sin(p * 2), neck: -1.5 * Math.sin(p * 2),
+    };
+  });
+}
+function idleFrames(joints, n) {
+  return samplesFor(n, (t) => {
+    const p = t * Math.PI * 2;
+    return { spine: 2 * Math.sin(p), neck: -1.5 * Math.sin(p), lUpperArm: 3 * Math.sin(p), rUpperArm: -3 * Math.sin(p) };
+  });
+}
+// Right-handed strike, kept entirely on the right side of the body: windup
+// raises the arm up-and-back over the shoulder, the strike extends it
+// forward-and-down on the same side (never crossing toward 90 degrees past
+// horizontal, which is what would swing it across the midline), recover
+// eases back toward a relaxed low position.
+function attackFrames(joints, n) {
+  const keys = [
+    mergeDeltas(poseFromAngles(joints, { rUpperArm: -95, rLowerArm: -105 }), { spine: -6 }),
+    mergeDeltas(poseFromAngles(joints, { rUpperArm: 25, rLowerArm: 20 }), { spine: 8, lThigh: -10, rThigh: 10 }),
+    mergeDeltas(poseFromAngles(joints, { rUpperArm: 45, rLowerArm: 55 }), { spine: 2 }),
+  ];
+  return keyframeFrames(keys, n);
+}
+// quick recoil - knocked back and flinching, then settling
+function hurtFrames(joints, n) {
+  const keys = [
+    {},
+    { spine: -14, neck: 10, lUpperArm: -10, rUpperArm: 10, lThigh: 6, rThigh: 6 },
+    { spine: -6, neck: 4 },
+    {},
+  ];
+  return keyframeFrames(keys, n);
+}
+// both arms straight up in a "V" - victory / level-up flourish. Angles are
+// symmetric around -90 (straight up): left arm leans slightly toward -100
+// (up-and-left), right arm toward -80 (up-and-right), so they read as
+// deliberately spread outward rather than both pointing perfectly straight
+// up (which would look stiff) or, if the sign were wrong, folding inward.
+function cheerFrames(joints, n) {
+  const keys = [
+    {},
+    mergeDeltas(poseFromAngles(joints, { lUpperArm: -100, rUpperArm: -80, lLowerArm: -100, rLowerArm: -80 }), { spine: -4 }),
+    mergeDeltas(poseFromAngles(joints, { lUpperArm: -95, rUpperArm: -85, lLowerArm: -95, rLowerArm: -85 }), { spine: 2, neck: -4 }),
+    mergeDeltas(poseFromAngles(joints, { lUpperArm: -100, rUpperArm: -80, lLowerArm: -100, rLowerArm: -80 }), { spine: -4 }),
+  ];
+  return keyframeFrames(keys, n);
+}
+
+// Five motions from one skeleton - the point of rigging instead of hand-
+// drawing each frame. Frame counts here are the "how many poses" knob;
+// bump these to get an even smoother result next time.
+const CLIP_META = {
+  idle: { fps: 3, loop: true, count: 4, gen: idleFrames },
+  walk: { fps: 10, loop: true, count: 8, gen: walkFrames },
+  attack: { fps: 12, loop: false, count: 5, gen: attackFrames },
+  hurt: { fps: 14, loop: false, count: 6, gen: hurtFrames },
+  cheer: { fps: 6, loop: true, count: 6, gen: cheerFrames },
+};
+
+let generatedFrames = null; // flat array of grids, shared sheet across all clips
+let generatedClips = null;  // { idle: {frames:[globalIdx...], fps, loop}, ... }
+let generatedFrameSize = 0;
+let previewClip = 'walk';
+let previewRAF = null;
+
+// Which cells a flood-fill starting from the canvas border can reach while
+// only crossing transparent cells - i.e. "provably background", not enclosed.
+// 8-directional throughout this file's connectivity checks (not just 4) -
+// diagonally-touching pixels read as connected/no-gap to the eye in pixel
+// art, and it's also what keeps a diagonal-stepping Bresenham bridge (see
+// bridgeDisconnectedIslands) from being mistaken for still-disconnected.
+const NEIGHBORS_8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+function floodReachFromBorder(g, n) {
+  const reached = Array.from({ length: n }, () => new Array(n).fill(false));
+  const stack = [];
+  for (let x = 0; x < n; x++) { if (!g[0][x]) stack.push([x, 0]); if (!g[n - 1][x]) stack.push([x, n - 1]); }
+  for (let y = 0; y < n; y++) { if (!g[y][0]) stack.push([0, y]); if (!g[y][n - 1]) stack.push([n - 1, y]); }
+  while (stack.length) {
+    const [x, y] = stack.pop();
+    if (x < 0 || y < 0 || x >= n || y >= n || reached[y][x] || g[y][x]) continue;
+    reached[y][x] = true;
+    for (const [dx, dy] of NEIGHBORS_8) stack.push([x + dx, y + dy]);
+  }
+  return reached;
+}
+
+// diagnostic-only: counts strictly-enclosed transparent cells (used while
+// testing the renderer; actual gap repair is fillSmallGaps above).
+function countInteriorHoles(g, n) {
+  const reached = floodReachFromBorder(g, n);
+  let holes = 0;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (!g[y][x] && !reached[y][x]) holes++;
+  return holes;
+}
+
+const CLIP_NAMES = ['idle', 'walk', 'attack', 'hurt', 'cheer'];
+
+function generateAllMotions() {
+  if (!joints) { alert('先に「🦴 骨格編集モードにする」で骨格をキャラに合わせてください。'); return; }
+  const n = gridSize;
+  const bind = bindPixelsToSkeleton(grid, n, joints);
+  const restSnapshot = JSON.parse(JSON.stringify(joints));
+  const frames = [];
+  const clips = {};
+  let offset = 0;
+  for (const clipName of CLIP_NAMES) {
+    const meta = CLIP_META[clipName];
+    const deltasList = meta.gen(restSnapshot, meta.count);
+    const localFrames = deltasList.map(deltas => {
+      const frame = renderPoseFrame(grid, n, restSnapshot, bind, deltas);
+      connectJoints(frame, n, solvePose(restSnapshot, deltas), bind);
+      const patched = fillSmallGaps(frame, n, restSnapshot, deltas, bind);
+      return bridgeDisconnectedIslands(patched, n);
+    });
+    frames.push(...localFrames);
+    clips[clipName] = { frames: localFrames.map((_, i) => i + offset), fps: meta.fps, loop: meta.loop };
+    offset += localFrames.length;
+  }
+  generatedFrames = frames;
+  generatedClips = clips;
+  generatedFrameSize = n;
+  $('anim-preview-row').hidden = false;
+  $('anim-preview-controls').hidden = false;
+  $('btn-download-sheet').disabled = false;
+  startPreview();
+}
+
+// ---- home-position recommendation: score every preset against the current
+// drawing, and show the best fits first so a mismatched rest pose doesn't
+// have to be discovered by trial and error.
+//
+// The score is the average distance from each drawn (opaque) pixel to
+// whichever bone it ends up bound to - a direct, pose-independent measure of
+// "do these bones actually run through the limbs in the art". A pixel far
+// from its bone is exactly what later shows up as tearing/holes/pixel loss
+// once that bone rotates, so this predicts fit quality without having to
+// guess a specific test pose.
+//
+// An earlier version instead posed every preset with a fixed test rotation
+// and counted resulting holes - that measure backfired: a thin limb that's
+// CORRECTLY bound genuinely articulates at its joint (exactly where rigid,
+// non-blended skinning is weakest), while a limb that's WRONGLY bound to a
+// nearby large bone (e.g. a raised arm mistakenly caught by the neck) just
+// rides along rigidly and looks deceptively gap-free. Bind distance doesn't
+// have that failure mode, since it never poses anything.
+function scoreHomePreset(presetKey, g, n) {
+  const restJoints = buildJoints(n, presetKey);
+  const bind = bindPixelsToSkeleton(g, n, restJoints);
+  let opaque = 0, distSum = 0;
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if (!g[y][x]) continue;
+      opaque++;
+      distSum += bind.map[y][x] ? bind.map[y][x].dist : 0;
+    }
+  }
+  const avgBindDist = opaque ? distSum / opaque : 0;
+  return { score: Math.round(avgBindDist * 10) / 10, restJoints, avgBindDist };
+}
+
+$('btn-diagnose-home').onclick = () => {
+  let hasArt = false;
+  for (let y = 0; y < gridSize; y++) for (let x = 0; x < gridSize; x++) if (grid[y][x]) hasArt = true;
+  if (!hasArt) { alert('先にキャラのドット絵を描くか読み込んでください。'); return; }
+  const n = gridSize;
+  const ranked = Object.keys(HOME_POSITION_PRESETS)
+    .map(key => ({ key, label: HOME_POSITION_PRESETS[key].label, ...scoreHomePreset(key, grid, n) }))
+    .sort((a, b) => a.score - b.score);
+
+  const gallery = $('home-position-gallery');
+  gallery.innerHTML = '';
+  gallery.hidden = false;
+  ranked.forEach((r, i) => {
+    const card = document.createElement('div');
+    card.className = 'home-card' + (i === 0 ? ' best' : '');
+    const mini = document.createElement('canvas');
+    mini.width = n; mini.height = n;
+    const mctx = mini.getContext('2d');
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (grid[y][x]) { mctx.fillStyle = grid[y][x]; mctx.fillRect(x, y, 1, 1); }
+    mctx.strokeStyle = 'rgba(94,200,255,0.9)'; mctx.lineWidth = Math.max(1, n / 24);
+    for (const bd of BONE_DEFS) {
+      const A = r.restJoints[bd.a], B = r.restJoints[bd.b];
+      mctx.beginPath(); mctx.moveTo(A.x, A.y); mctx.lineTo(B.x, B.y); mctx.stroke();
+    }
+    card.appendChild(mini);
+    const label = document.createElement('div');
+    label.className = 'hlabel';
+    label.textContent = (i === 0 ? '⭐ ' : '') + r.label;
+    card.appendChild(label);
+    const score = document.createElement('div');
+    score.className = 'hscore';
+    score.textContent = `かけ ${r.score}`;
+    card.appendChild(score);
+    card.onclick = () => {
+      joints = JSON.parse(JSON.stringify(r.restJoints));
+      toggleSkeletonMode(true);
+      gallery.querySelectorAll('.home-card').forEach(c => c.style.outline = '');
+      card.style.outline = `2px solid var(--gold)`;
+    };
+    gallery.appendChild(card);
+  });
+};
+
+function drawGridToCtx(pctx, g, n, size) {
+  pctx.clearRect(0, 0, size, size);
+  const cell = size / n;
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if (g[y][x]) { pctx.fillStyle = g[y][x]; pctx.fillRect(x * cell, y * cell, cell + 0.5, cell + 0.5); }
+    }
+  }
+}
+
+function startPreview() {
+  if (previewRAF) cancelAnimationFrame(previewRAF);
+  const pctx = $('anim-preview').getContext('2d');
+  pctx.imageSmoothingEnabled = false;
+  const t0 = performance.now();
+  function tick(now) {
+    if (!generatedFrames) return;
+    const clip = generatedClips[previewClip];
+    const idx = Math.floor(((now - t0) / 1000) * clip.fps) % clip.frames.length;
+    drawGridToCtx(pctx, generatedFrames[clip.frames[idx]], generatedFrameSize, 96);
+    previewRAF = requestAnimationFrame(tick);
+  }
+  previewRAF = requestAnimationFrame(tick);
+}
+
+$('btn-gen-motions').onclick = generateAllMotions;
+document.querySelectorAll('[data-clip]').forEach(btn => {
+  btn.onclick = () => {
+    previewClip = btn.dataset.clip;
+    document.querySelectorAll('[data-clip]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  };
+});
+
+$('btn-download-sheet').onclick = () => {
+  if (!generatedFrames) return;
+  const n = generatedFrameSize;
+  const sheet = document.createElement('canvas');
+  sheet.width = n * generatedFrames.length; sheet.height = n;
+  const sctx = sheet.getContext('2d');
+  generatedFrames.forEach((g, i) => {
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        if (g[y][x]) { sctx.fillStyle = g[y][x]; sctx.fillRect(i * n + x, y, 1, 1); }
+      }
+    }
+  });
+  const name = ($('f-filename').value.trim() || 'pixelArt').replace(/[^a-zA-Z0-9_-]/g, '') || 'pixelArt';
+
+  const a1 = document.createElement('a');
+  a1.href = sheet.toDataURL('image/png');
+  a1.download = `${name}.png`;
+  a1.click();
+
+  const manifest = {
+    frameW: n, frameH: n,
+    clips: generatedClips,
+    variants: {
+      enrage: { tint: '#ff2b4a', tintStrength: 0.4 },
+      veteran: { tint: '#ffd76a', tintStrength: 0.28, scale: 1.15 },
+    },
+  };
+  const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+  const a2 = document.createElement('a');
+  a2.href = URL.createObjectURL(blob);
+  a2.download = `${name}.anim.json`;
+  // two downloads triggered back to back can be dropped by some browsers -
+  // stagger the second slightly so both reliably save
+  setTimeout(() => a2.click(), 250);
+
+  $('sheet-hint').textContent = `保存先の目安: ${$('f-folder').value}${name}.png と ${name}.anim.json (同じフォルダに2つとも置いてください)`;
+};
+
+// ---- export ----
+$('btn-download').onclick = () => {
+  const out = document.createElement('canvas');
+  out.width = gridSize; out.height = gridSize;
+  const octx = out.getContext('2d');
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      const c = grid[y][x];
+      if (c) { octx.fillStyle = c; octx.fillRect(x, y, 1, 1); }
+    }
+  }
+  const name = ($('f-filename').value.trim() || 'pixelArt').replace(/[^a-zA-Z0-9_-]/g, '');
+  const a = document.createElement('a');
+  a.href = out.toDataURL('image/png');
+  a.download = `${name || 'pixelArt'}.png`;
+  a.click();
+  $('save-hint').textContent = `保存先の目安: ${$('f-folder').value}${name}.png`;
+};
+
+// ---- init ----
+setGridSize(32, false);
+updateCurrentSwatch();
+</script>
+</body>
+</html>

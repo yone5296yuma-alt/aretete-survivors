@@ -1,0 +1,15 @@
+{
+  "name": "aretete-survivors-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Accounts, online leaderboard, and cloud save API for Are Tete Survivors. Separate from the static game file server (tools/nocache_server.py).",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.17.4",
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Are Tete Survivors</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- TITLE SCREEN -->
+  <section id="screen-title" class="screen">
+    <div class="title-wrap">
+      <h1 class="game-logo">🌲 ARE TETE<br><span>SURVIVORS</span> 👑</h1>
+      <p class="subtitle">〜城を抜け出した姫の、森林逃走サバイバル〜</p>
+      <div id="title-coins" class="title-coins">🪙 0</div>
+      <button id="btn-start" class="btn btn-primary">はじめる</button>
+      <button id="btn-shop" class="btn">🛒 ショップ</button>
+      <button id="btn-ranking" class="btn">🏆 ランキング</button>
+      <button id="btn-account" class="btn">👤 アカウント</button>
+      <button id="btn-howto" class="btn">あそびかた</button>
+      <button id="btn-compendium" class="btn">📖 図鑑</button>
+      <a href="enemy-creator.html" target="_blank" rel="noopener" class="btn link-btn">🎨 敵キャラを作る</a>
+      <a href="pixel-editor.html" target="_blank" rel="noopener" class="btn link-btn">🖌️ ドット絵を作る</a>
+      <div class="hand-toggle">
+        <span>操作スティックの位置:</span>
+        <button id="btn-hand-left" class="chip-btn">左利き</button>
+        <button id="btn-hand-right" class="chip-btn">右利き</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SHOP -->
+  <section id="screen-shop" class="screen hidden">
+    <div class="panel select-panel">
+      <h2>🛒 ショップ</h2>
+      <div id="shop-coins" class="shop-coins">🪙 0</div>
+      <p class="rank-note">ランで稼いだコインで永続強化を購入できます</p>
+      <div id="shop-list" class="shop-list"></div>
+      <div class="select-actions">
+        <button class="btn btn-primary btn-back">もどる</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPENDIUM (weapon/passive stats + evolution recipes) -->
+  <section id="screen-compendium" class="screen hidden">
+    <div class="panel select-panel">
+      <h2>📖 図鑑</h2>
+      <div class="compendium-tabs">
+        <button id="tab-comp-weapons" class="chip-btn active">武器</button>
+        <button id="tab-comp-passives" class="chip-btn">強化アイテム</button>
+        <button id="tab-comp-evo" class="chip-btn">進化レシピ</button>
+      </div>
+      <div id="compendium-list" class="compendium-list"></div>
+      <div class="select-actions">
+        <button class="btn btn-primary btn-back">もどる</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW TO PLAY -->
+  <section id="screen-howto" class="screen hidden">
+    <div class="panel">
+      <h2>あそびかた</h2>
+      <ul class="howto-list">
+        <li>🕹️ PC: WASD / 矢印キーで移動。スマホ: 左下のスティックで移動</li>
+        <li>⚔️ 武器は自動で発動。近くの敵を狙う</li>
+        <li>💎 敵を倒すと出るジェムでレベルアップ、強化を1つ選択</li>
+        <li>📦 宝箱を拾うとランダムでアイテム獲得</li>
+        <li>🌸 回復の花でHP回復、🍎 知恵の実でジェムを一括回収</li>
+        <li>⏱️ ステージモードは制限時間まで生き延びればクリア！エンドレスモードは倒れるまで挑戦</li>
+      </ul>
+      <button class="btn btn-primary btn-back">もどる</button>
+    </div>
+  </section>
+
+  <!-- STAGE / MODE SELECT -->
+  <section id="screen-stage" class="screen hidden">
+    <div class="panel select-panel">
+      <h2>ステージをえらぶ</h2>
+      <div id="stage-list" class="costume-list"></div>
+      <div id="stage-detail" class="costume-detail"></div>
+      <div class="select-actions">
+        <button class="btn btn-back">もどる</button>
+        <button id="btn-confirm-stage" class="btn btn-primary">つぎへ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHARACTER / COSTUME SELECT -->
+  <section id="screen-select" class="screen hidden">
+    <div class="panel select-panel">
+      <h2>衣装をえらぶ</h2>
+      <div id="costume-list" class="costume-list"></div>
+      <div id="costume-detail" class="costume-detail"></div>
+      <div class="select-actions">
+        <button id="btn-back-to-stage" class="btn">もどる</button>
+        <button id="btn-confirm-costume" class="btn btn-primary">出撃！</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RANKING -->
+  <section id="screen-ranking" class="screen hidden">
+    <div class="panel select-panel">
+      <h2>🏆 エンドレスモード ランキング</h2>
+      <p id="ranking-note" class="rank-note">このブラウザだけに記録されるローカルランキングです</p>
+      <div id="ranking-list" class="ranking-list"></div>
+      <div class="select-actions">
+        <button class="btn btn-primary btn-back">もどる</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACCOUNT (login/register for online ranking + cloud save) -->
+  <section id="screen-account" class="screen hidden">
+    <div class="panel select-panel">
+      <h2>👤 アカウント</h2>
+      <div id="account-logged-out">
+        <p class="rank-note">ログインすると、ランキングやコイン・強化の進行状況を他の端末とも共有できます（サーバーが起動していない場合はこの端末だけの記録のままです）</p>
+        <div class="account-tabs">
+          <button id="tab-account-login" class="chip-btn active">ログイン</button>
+          <button id="tab-account-register" class="chip-btn">新規登録</button>
+        </div>
+        <input id="account-username" class="account-input" type="text" placeholder="ユーザー名（3〜20文字、英数字と_）" autocomplete="username">
+        <input id="account-password" class="account-input" type="password" placeholder="パスワード（4文字以上）" autocomplete="current-password">
+        <p id="account-error" class="account-error hidden"></p>
+        <button id="btn-account-submit" class="btn btn-primary">ログイン</button>
+      </div>
+      <div id="account-logged-in" class="hidden">
+        <p class="rank-note">ログイン中: <span id="account-current-username"></span></p>
+        <button id="btn-account-logout" class="btn">ログアウト</button>
+      </div>
+      <div class="select-actions">
+        <button class="btn btn-back">もどる</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="screen-game" class="screen hidden">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="hud">
+      <div class="hud-top">
+        <div class="hp-wrap">
+          <div class="hp-bar"><div id="hp-fill" class="hp-fill"></div></div>
+          <span id="hp-text">100/100</span>
+        </div>
+        <div id="timer" class="timer">00:00</div>
+        <div class="hud-right">
+          <span id="kill-count">💀 0</span>
+          <button id="btn-loadout" class="icon-btn" title="現在の装備 (Tabキー)">🎒</button>
+          <button id="btn-pause" class="icon-btn">⏸</button>
+        </div>
+      </div>
+      <div class="xp-bar"><div id="xp-fill" class="xp-fill"></div></div>
+      <div id="level-badge" class="level-badge">Lv.1</div>
+      <div id="floor-badge" class="floor-badge hidden">階層 0</div>
+      <div id="weapon-tray" class="weapon-tray"></div>
+    </div>
+
+    <!-- touch controls -->
+    <div id="touch-stick-zone" class="touch-stick-zone">
+      <div id="touch-stick-base" class="touch-stick-base">
+        <div id="touch-stick-knob" class="touch-stick-knob"></div>
+      </div>
+    </div>
+
+    <!-- level up overlay -->
+    <div id="levelup-overlay" class="overlay hidden">
+      <div class="panel levelup-panel">
+        <h2>レベルアップ！</h2>
+        <div id="levelup-cards" class="card-row"></div>
+      </div>
+    </div>
+
+    <!-- pause overlay -->
+    <div id="pause-overlay" class="overlay hidden">
+      <div class="panel">
+        <h2>ポーズ中</h2>
+        <button id="btn-resume" class="btn btn-primary">再開</button>
+        <button id="btn-open-loadout" class="btn">🎒 現在の装備を見る</button>
+        <button id="btn-quit" class="btn">タイトルへ</button>
+      </div>
+    </div>
+
+    <!-- current loadout overlay -->
+    <div id="loadout-overlay" class="overlay hidden">
+      <div class="panel select-panel">
+        <h2>🎒 現在の装備</h2>
+        <div id="loadout-list" class="compendium-list"></div>
+        <div class="select-actions">
+          <button id="btn-close-loadout" class="btn btn-primary">とじる</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- boss warning -->
+    <div id="boss-warning" class="boss-warning hidden">⚠️ 強敵接近中 ⚠️</div>
+  </section>
+
+  <!-- RESULT SCREEN -->
+  <section id="screen-result" class="screen hidden">
+    <div class="panel result-panel">
+      <h2 id="result-title">リザルト</h2>
+      <div id="result-stats" class="result-stats"></div>
+      <button id="btn-result-back" class="btn btn-primary">タイトルへ</button>
+    </div>
+  </section>
+
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

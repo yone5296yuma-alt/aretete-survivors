@@ -1,0 +1,14 @@
+[
+  {
+    "id": "hosimati",
+    "name": "hosimati",
+    "icon": "🧑",
+    "hp": 80,
+    "damage": 20,
+    "speed": 1,
+    "radius": 30,
+    "color": "#85a9e6",
+    "tier": 3,
+    "stage": "forest"
+  }
+]
