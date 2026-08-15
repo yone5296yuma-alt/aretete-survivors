@@ -126,7 +126,7 @@ document.querySelectorAll('.btn-back').forEach(b => b.onclick = () => { refreshT
 let compendiumTab = 'weapons';
 function refreshCompendium() {
   document.querySelectorAll('.compendium-tabs .chip-btn').forEach(b => b.classList.remove('active'));
-  const map = { weapons: 'tab-comp-weapons', passives: 'tab-comp-passives', evolution: 'tab-comp-evo' };
+  const map = { weapons: 'tab-comp-weapons', passives: 'tab-comp-passives', evolution: 'tab-comp-evo', skills: 'tab-comp-skills' };
   $(map[compendiumTab]).classList.add('active');
   renderCompendium($('compendium-list'), compendiumTab);
 }
@@ -134,6 +134,7 @@ $('btn-compendium').onclick = () => { compendiumTab = 'weapons'; refreshCompendi
 $('tab-comp-weapons').onclick = () => { compendiumTab = 'weapons'; refreshCompendium(); };
 $('tab-comp-passives').onclick = () => { compendiumTab = 'passives'; refreshCompendium(); };
 $('tab-comp-evo').onclick = () => { compendiumTab = 'evolution'; refreshCompendium(); };
+$('tab-comp-skills').onclick = () => { compendiumTab = 'skills'; refreshCompendium(); };
 
 $('btn-confirm-stage').onclick = () => {
   refreshCostumeUI();

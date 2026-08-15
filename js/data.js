@@ -110,6 +110,7 @@ export const WEAPONS = {
     base: { cooldown: 0.9, damage: 5, count: 3, pierce: 0, speed: 6.5, area: 1 },
     perLevel: { damage: 1.5, count: 0, cooldown: -0.04 },
     levelExtra: { 3: { count: 1 }, 5: { count: 1 } },
+    evolvesWith: 'forestCloak', evolvesTo: 'goldenAcornBarrage',
   },
   thornVortex: {
     id: 'thornVortex', name: 'いばらの渦', icon: '🥀', color: '#c76bd6', maxLevel: 5, behavior: 'orbit',
@@ -117,18 +118,21 @@ export const WEAPONS = {
     base: { cooldown: 0, damage: 5, count: 2, pierce: 99, orbitR: 90, spinSpeed: 2.4, area: 1, tickRate: 0.35 },
     perLevel: { damage: 2, area: 0.1 },
     levelExtra: { 3: { count: 1 }, 5: { count: 1 } },
+    evolvesWith: 'travelersBoots', evolvesTo: 'endlessBriar',
   },
   branchTrap: {
     id: 'branchTrap', name: '巨木の落枝', icon: '🪵', color: '#8a6a4a', maxLevel: 5, behavior: 'nova',
     desc: 'マップ上のランダムな敵の頭上に太い枝を落とす。',
     base: { cooldown: 1.3, damage: 20, count: 1, area: 1, radius: 55 },
     perLevel: { damage: 8, count: 1, cooldown: -0.05 },
+    evolvesWith: 'guidingBell', evolvesTo: 'ancientOakFall',
   },
   moonHowl: {
     id: 'moonHowl', name: '月夜の遠吠え', icon: '🐺', color: '#9fb8ff', maxLevel: 5, behavior: 'aura',
     desc: '一定間隔で遠吠えの衝撃波が広がり周囲の敵にダメージ。',
     base: { cooldown: 1.8, damage: 10, area: 1, radius: 90 },
     perLevel: { damage: 4, area: 0.15, cooldown: -0.08 },
+    evolvesWith: 'wolfsBond', evolvesTo: 'eternalHowl',
   },
   silverArrow: {
     id: 'silverArrow', name: '銀の矢', icon: '🏹', color: '#d8d8e0', maxLevel: 5, behavior: 'homing',
@@ -136,12 +140,68 @@ export const WEAPONS = {
     base: { cooldown: 0.5, damage: 5, count: 1, pierce: 1, speed: 9, area: 1 },
     perLevel: { damage: 2, cooldown: -0.03 },
     levelExtra: { 3: { count: 1 }, 5: { pierce: 1 } },
+    evolvesWith: 'hawkEye', evolvesTo: 'moonsilverVolley',
   },
   travelersSling: {
     id: 'travelersSling', name: '旅商人のスリング', icon: '🪨', color: '#a8a8a8', maxLevel: 5, behavior: 'spread',
     desc: '石つぶてを連射する。旅商人風テテの得意武器。',
     base: { cooldown: 0.7, damage: 7, count: 2, pierce: 1, speed: 7, area: 1 },
     perLevel: { damage: 3, count: 1, cooldown: -0.04 },
+    evolvesWith: 'merchantsEye', evolvesTo: 'merchantsBarrage',
+  },
+  frostCharm: {
+    id: 'frostCharm', name: '氷結の呪符', icon: '❄️', color: '#a8e0ff', maxLevel: 5, behavior: 'homing',
+    desc: '最も近い敵を凍える呪符が追尾する。',
+    base: { cooldown: 1.1, damage: 8, count: 1, pierce: 1, speed: 5.5, area: 1 },
+    perLevel: { damage: 3.5, cooldown: -0.06 },
+    levelExtra: { 3: { count: 1 }, 5: { count: 1, pierce: 1 } },
+    evolvesWith: 'winterCloak', evolvesTo: 'blizzardCharm',
+  },
+  undyingVine: {
+    id: 'undyingVine', name: '朽ちない蔦', icon: '🌿', color: '#7fd88a', maxLevel: 5, behavior: 'sweep',
+    desc: 'プレイヤーの周囲を蔦が薙ぎ払う。',
+    base: { cooldown: 1.5, damage: 10, count: 2, pierce: 99, area: 1, spinSpeed: 2.8, orbitR: 65 },
+    perLevel: { damage: 4, area: 0.1, cooldown: -0.06 },
+    levelExtra: { 4: { count: 1 } },
+    evolvesWith: 'rootedHeart', evolvesTo: 'worldTreeRoots',
+  },
+  chainWeight: {
+    id: 'chainWeight', name: '鎖分銅', icon: '⛓️', color: '#9a9aa8', maxLevel: 5, behavior: 'boomerang',
+    desc: '振り回した鎖分銅が敵を貫通して戻る。',
+    base: { cooldown: 1.5, damage: 13, count: 1, pierce: 8, speed: 6.5, range: 240, area: 1 },
+    perLevel: { damage: 5, cooldown: -0.06 },
+    levelExtra: { 3: { count: 1 }, 5: { count: 1 } },
+    evolvesWith: 'ironResolve', evolvesTo: 'greatChainFlail',
+  },
+  stardustShot: {
+    id: 'stardustShot', name: '星屑の散弾', icon: '🌠', color: '#e0d0ff', maxLevel: 5, behavior: 'spread',
+    desc: '流星のような星屑を全方位に拡散させる。',
+    base: { cooldown: 1.0, damage: 6, count: 4, pierce: 0, speed: 6, area: 1 },
+    perLevel: { damage: 2, cooldown: -0.04 },
+    levelExtra: { 3: { count: 1 }, 5: { count: 2 } },
+    evolvesWith: 'starMap', evolvesTo: 'meteorShower',
+  },
+  owlFamiliar: {
+    id: 'owlFamiliar', name: '梟の眷属', icon: '🦉', color: '#c9a86a', maxLevel: 5, behavior: 'orbit',
+    desc: '梟の使い魔が周囲を旋回し爪で攻撃し続ける。',
+    base: { cooldown: 0, damage: 4, count: 2, pierce: 99, orbitR: 100, spinSpeed: 2.0, area: 1, tickRate: 0.35 },
+    perLevel: { damage: 1.8, area: 0.1 },
+    levelExtra: { 3: { count: 1 }, 5: { count: 1 } },
+    evolvesWith: 'nightVision', evolvesTo: 'greatHornedGuardian',
+  },
+  quakingStrike: {
+    id: 'quakingStrike', name: '地割れの一撃', icon: '💢', color: '#c98a4a', maxLevel: 5, behavior: 'nova',
+    desc: '敵の足元の地面が割れ、衝撃で吹き飛ばす。',
+    base: { cooldown: 1.5, damage: 22, count: 1, area: 1, radius: 60 },
+    perLevel: { damage: 9, count: 1, cooldown: -0.05 },
+    evolvesWith: 'stoneFist', evolvesTo: 'canyonRupture',
+  },
+  blessingChime: {
+    id: 'blessingChime', name: '祝福の風鈴', icon: '🎐', color: '#ffe6f0', maxLevel: 5, behavior: 'aura',
+    desc: '風鈴の音色が波紋のように広がり敵を浄化する。',
+    base: { cooldown: 2.0, damage: 8, area: 1, radius: 85 },
+    perLevel: { damage: 3.5, area: 0.15, cooldown: -0.07 },
+    evolvesWith: 'travelersPrayer', evolvesTo: 'sanctuaryChime',
   },
 };
 
@@ -164,6 +224,84 @@ export const EVOLVED_WEAPONS = {
     base: { cooldown: 0.7, damage: 26, count: 5, pierce: 99, speed: 9, range: 320, area: 1.5 },
     perLevel: {},
   },
+  goldenAcornBarrage: {
+    id: 'goldenAcornBarrage', name: '黄金ドングリ乱舞', icon: '🌟', color: '#ffd76a', aura: true, maxLevel: 1, behavior: 'spread',
+    desc: '進化武器。黄金のドングリが全方位に降り注ぐ。',
+    base: { cooldown: 0.5, damage: 18, count: 10, pierce: 2, speed: 7, area: 1.6 },
+    perLevel: {},
+  },
+  endlessBriar: {
+    id: 'endlessBriar', name: '永劫のいばら', icon: '🌹', color: '#e05a9a', aura: true, maxLevel: 1, behavior: 'orbit',
+    desc: '進化武器。いばらが巨大化し絶え間なく敵を切り裂く。',
+    base: { cooldown: 0, damage: 16, count: 5, pierce: 99, orbitR: 130, spinSpeed: 3.2, area: 2, tickRate: 0.25 },
+    perLevel: {},
+  },
+  ancientOakFall: {
+    id: 'ancientOakFall', name: '大古樹の崩落', icon: '🌳', color: '#5a8a4a', aura: true, maxLevel: 1, behavior: 'nova',
+    desc: '進化武器。大古樹そのものが崩れ落ちる大爆撃。',
+    base: { cooldown: 0.6, damage: 60, count: 3, area: 1.8, radius: 100 },
+    perLevel: {},
+  },
+  eternalHowl: {
+    id: 'eternalHowl', name: '永遠の遠吠え', icon: '🌕', color: '#c9d8ff', aura: true, maxLevel: 1, behavior: 'aura',
+    desc: '進化武器。満月の遠吠えが絶え間なく響き渡る。',
+    base: { cooldown: 0.7, damage: 26, area: 2, radius: 150 },
+    perLevel: {},
+  },
+  moonsilverVolley: {
+    id: 'moonsilverVolley', name: '月銀の連矢', icon: '🌌', color: '#e8e8ff', aura: true, maxLevel: 1, behavior: 'homing',
+    desc: '進化武器。月銀の矢が絶え間なく降り注ぐ。',
+    base: { cooldown: 0.15, damage: 12, count: 2, pierce: 2, speed: 11, area: 1.3 },
+    perLevel: {},
+  },
+  merchantsBarrage: {
+    id: 'merchantsBarrage', name: '豪商の一斉射撃', icon: '💰', color: '#ffd76a', aura: true, maxLevel: 1, behavior: 'spread',
+    desc: '進化武器。ありったけの石つぶてを一斉にばら撒く。',
+    base: { cooldown: 0.4, damage: 14, count: 8, pierce: 2, speed: 8, area: 1.4 },
+    perLevel: {},
+  },
+  blizzardCharm: {
+    id: 'blizzardCharm', name: '吹雪の呪符', icon: '🌨️', color: '#c8f0ff', aura: true, maxLevel: 1, behavior: 'homing',
+    desc: '進化武器。吹雪の呪符が敵を凍てつかせながら追尾する。',
+    base: { cooldown: 0.45, damage: 30, count: 4, pierce: 4, speed: 6.5, area: 1.8 },
+    perLevel: {},
+  },
+  worldTreeRoots: {
+    id: 'worldTreeRoots', name: '世界樹の根', icon: '🌲', color: '#3d7a4a', aura: true, maxLevel: 1, behavior: 'sweep',
+    desc: '進化武器。世界樹の根が地を這い薙ぎ払う。',
+    base: { cooldown: 0.8, damage: 40, count: 5, pierce: 99, area: 2.4, spinSpeed: 3.6, orbitR: 110 },
+    perLevel: {},
+  },
+  greatChainFlail: {
+    id: 'greatChainFlail', name: '大鎖分銅', icon: '⚙️', color: '#7a7a8a', aura: true, maxLevel: 1, behavior: 'boomerang',
+    desc: '進化武器。巨大な鎖分銅が敵を薙ぎ倒しながら往復する。',
+    base: { cooldown: 0.6, damage: 34, count: 2, pierce: 99, speed: 7.5, range: 340, area: 1.8 },
+    perLevel: {},
+  },
+  meteorShower: {
+    id: 'meteorShower', name: '流星群', icon: '☄️', color: '#e0d0ff', aura: true, maxLevel: 1, behavior: 'spread',
+    desc: '進化武器。夜空を割って流星群が降り注ぐ。',
+    base: { cooldown: 0.5, damage: 16, count: 12, pierce: 1, speed: 7, area: 1.5 },
+    perLevel: {},
+  },
+  greatHornedGuardian: {
+    id: 'greatHornedGuardian', name: '大角梟の守護', icon: '🦉', color: '#c9a86a', aura: true, maxLevel: 1, behavior: 'orbit',
+    desc: '進化武器。大角梟の眷属が力強く旋回し続ける。',
+    base: { cooldown: 0, damage: 14, count: 5, pierce: 99, orbitR: 130, spinSpeed: 2.6, area: 1.6, tickRate: 0.25 },
+    perLevel: {},
+  },
+  canyonRupture: {
+    id: 'canyonRupture', name: '大峡谷の断裂', icon: '🏔️', color: '#c98a4a', aura: true, maxLevel: 1, behavior: 'nova',
+    desc: '進化武器。大地そのものが割れ広範囲を飲み込む。',
+    base: { cooldown: 0.8, damage: 64, count: 3, area: 1.8, radius: 110 },
+    perLevel: {},
+  },
+  sanctuaryChime: {
+    id: 'sanctuaryChime', name: '聖域の鐘', icon: '⛩️', color: '#ffe6f0', aura: true, maxLevel: 1, behavior: 'aura',
+    desc: '進化武器。聖域の鐘の音色が絶え間なく敵を浄化する。',
+    base: { cooldown: 0.9, damage: 22, area: 2, radius: 140 },
+    perLevel: {},
+  },
 };
 
 // -------------------- PASSIVE ITEMS --------------------
@@ -177,12 +315,36 @@ export const PASSIVES = {
   guidingBell: { id: 'guidingBell', name: '道しるべの鈴', icon: '🔔', maxLevel: 5, stat: 'pickupRange', perLevel: 25, desc: 'アイテム収集範囲+25' },
   ringOfSwiftness: { id: 'ringOfSwiftness', name: '俊敏の指輪', icon: '💍', maxLevel: 5, stat: 'cooldown', perLevel: -0.08, desc: '攻撃間隔-8%' },
   travelersJournal: { id: 'travelersJournal', name: '旅の記録帳', icon: '📖', maxLevel: 5, stat: 'xpMult', perLevel: 0.1, desc: '獲得経験値+10%' },
+  wolfsBond: { id: 'wolfsBond', name: '狼の絆', icon: '🐾', maxLevel: 5, stat: 'power', perLevel: 0.1, desc: '攻撃力+10%（月夜の遠吠え進化に必要）' },
+  hawkEye: { id: 'hawkEye', name: '鷹の目', icon: '🦅', maxLevel: 5, stat: 'cooldown', perLevel: -0.06, desc: '攻撃間隔-6%（銀の矢進化に必要）' },
+  merchantsEye: { id: 'merchantsEye', name: '商人の目利き', icon: '🧮', maxLevel: 5, stat: 'luck', perLevel: 0.15, desc: '運+0.15（旅商人のスリング進化に必要）' },
+  winterCloak: { id: 'winterCloak', name: '冬のマント', icon: '🧣', maxLevel: 5, stat: 'area', perLevel: 0.1, desc: '効果範囲+10%（氷結の呪符進化に必要）' },
+  rootedHeart: { id: 'rootedHeart', name: '根付いた心', icon: '🌱', maxLevel: 5, stat: 'maxHP', perLevel: 15, desc: '最大HP+15（朽ちない蔦進化に必要）' },
+  ironResolve: { id: 'ironResolve', name: '鉄の意志', icon: '⚒️', maxLevel: 5, stat: 'power', perLevel: 0.1, desc: '攻撃力+10%（鎖分銅進化に必要）' },
+  starMap: { id: 'starMap', name: '星の地図', icon: '🗺️', maxLevel: 5, stat: 'xpMult', perLevel: 0.08, desc: '獲得経験値+8%（星屑の散弾進化に必要）' },
+  nightVision: { id: 'nightVision', name: '夜目', icon: '👁️', maxLevel: 5, stat: 'pickupRange', perLevel: 20, desc: 'アイテム収集範囲+20（梟の眷属進化に必要）' },
+  stoneFist: { id: 'stoneFist', name: '石の拳', icon: '👊', maxLevel: 5, stat: 'power', perLevel: 0.12, desc: '攻撃力+12%（地割れの一撃進化に必要）' },
+  travelersPrayer: { id: 'travelersPrayer', name: '旅の祈り', icon: '🙏', maxLevel: 5, stat: 'regen', perLevel: 0.03, desc: 'HP自然回復+0.03/秒（祝福の風鈴進化に必要）' },
+  moonPriestessBlessing: { id: 'moonPriestessBlessing', name: '満月の巫女の加護', icon: '🌕', maxLevel: 5, stat: 'critMult', perLevel: 0.05, desc: '会心ダメージ倍率+0.05（永遠の遠吠えの超進化に必要）' },
 };
 
 export const EVOLUTION_PAIRS = [
   { weapon: 'moonlightDagger', passive: 'forestBlessing', evolvesTo: 'moonlightFlurry' },
   { weapon: 'crescentBlade', passive: 'knightsEmblem', evolvesTo: 'eternalCrescent' },
   { weapon: 'crownBoomerang', passive: 'fourLeafCharm', evolvesTo: 'royalFlush' },
+  { weapon: 'acornShot', passive: 'forestCloak', evolvesTo: 'goldenAcornBarrage' },
+  { weapon: 'thornVortex', passive: 'travelersBoots', evolvesTo: 'endlessBriar' },
+  { weapon: 'branchTrap', passive: 'guidingBell', evolvesTo: 'ancientOakFall' },
+  { weapon: 'moonHowl', passive: 'wolfsBond', evolvesTo: 'eternalHowl' },
+  { weapon: 'silverArrow', passive: 'hawkEye', evolvesTo: 'moonsilverVolley' },
+  { weapon: 'travelersSling', passive: 'merchantsEye', evolvesTo: 'merchantsBarrage' },
+  { weapon: 'frostCharm', passive: 'winterCloak', evolvesTo: 'blizzardCharm' },
+  { weapon: 'undyingVine', passive: 'rootedHeart', evolvesTo: 'worldTreeRoots' },
+  { weapon: 'chainWeight', passive: 'ironResolve', evolvesTo: 'greatChainFlail' },
+  { weapon: 'stardustShot', passive: 'starMap', evolvesTo: 'meteorShower' },
+  { weapon: 'owlFamiliar', passive: 'nightVision', evolvesTo: 'greatHornedGuardian' },
+  { weapon: 'quakingStrike', passive: 'stoneFist', evolvesTo: 'canyonRupture' },
+  { weapon: 'blessingChime', passive: 'travelersPrayer', evolvesTo: 'sanctuaryChime' },
 ];
 
 // -------------------- SUPER EVOLUTION (deep endgame, strict conditions) --------------------
@@ -193,6 +355,7 @@ export const SUPER_EVOLUTION_PAIRS = [
   { weapon: 'moonlightFlurry', passive: 'sharpenedBlade', minLevel: 20, evolvesTo: 'moonlightGoddess' },
   { weapon: 'eternalCrescent', passive: 'ringOfSwiftness', minLevel: 20, evolvesTo: 'crescentSovereign' },
   { weapon: 'royalFlush', passive: 'travelersJournal', minLevel: 20, evolvesTo: 'royalAscension' },
+  { weapon: 'eternalHowl', passive: 'moonPriestessBlessing', minLevel: 25, evolvesTo: 'lunarSovereign' },
 ];
 
 export const SUPER_EVOLVED_WEAPONS = {
@@ -214,6 +377,12 @@ export const SUPER_EVOLVED_WEAPONS = {
     base: { cooldown: 0.4, damage: 56, count: 8, pierce: 99, speed: 11, range: 380, area: 2.2 },
     perLevel: {},
   },
+  lunarSovereign: {
+    id: 'lunarSovereign', name: '月虹の女王', icon: '🌈', color: '#ffe0f5', aura: true, superAura: true, maxLevel: 1, behavior: 'aura',
+    desc: '超進化。月虹の女王の加護が絶えず敵を包み込む。',
+    base: { cooldown: 0.35, damage: 48, area: 2.6, radius: 180 },
+    perLevel: {},
+  },
 };
 
 // -------------------- WEAPON ELEMENT BRANCHES (Monster-Hunter-style tree) --------------------
@@ -227,7 +396,105 @@ export const BRANCH_DEFS = {
   explosion: { id: 'explosion', name: '爆発', icon: '💥', dmgMult: 0.9, desc: 'ヒット時に周囲の敵も巻き込む爆発を起こす' },
   power: { id: 'power', name: '会心', icon: '🎯', dmgMult: 1.25, critBonus: 0.15, desc: '攻撃力アップに加え、会心率が上昇する' },
 };
-export const BRANCHABLE_WEAPONS = ['moonlightDagger', 'crescentBlade', 'crownBoomerang', 'travelersSling'];
+export const BRANCHABLE_WEAPONS = [
+  'moonlightDagger', 'crescentBlade', 'crownBoomerang', 'travelersSling',
+  'silverArrow', 'acornShot', 'frostCharm', 'owlFamiliar',
+];
+
+// -------------------- CHARACTER SKILLS --------------------
+// Each costume has exactly 3 unique skills (HoloCure-style: distinct from
+// the shared weapon/passive pools above, one per character, not
+// interchangeable). Skills start unowned each run and are offered/leveled
+// through the same level-up-card flow as weapons/passives (see
+// buildUpgradeChoices in ui.js) rather than being auto-granted.
+//
+// type drives which generic execution path applies (see entities.js
+// Player.recompute for statBoost, game.js damageEnemy for onHit, the
+// player's per-frame skill-aura timer in game.js for aura, and the
+// Companion class in entities.js for summon) - only 4 mechanics to
+// implement, parametrized 15 ways rather than 15 bespoke systems.
+export const CHARACTER_SKILLS = {
+  butlerRabbit: [
+    {
+      id: 'nimbleFootwork', name: '俊敏な身のこなし', icon: '💨', maxLevel: 5, type: 'statBoost',
+      stat: 'moveSpeedMult', perLevel: 0.06, desc: '移動速度+6%',
+    },
+    {
+      id: 'opportunisticStrike', name: '隙をつく一撃', icon: '🎩', maxLevel: 5, type: 'onHit', effect: 'bonusDamage',
+      base: { chance: 0.12, value: 6 }, perLevel: { chance: 0.02, value: 2.5 },
+      desc: '攻撃命中時、確率で追加ダメージ',
+    },
+    {
+      id: 'butlersLoyalty', name: '執事の忠義', icon: '🧺', maxLevel: 5, type: 'summon', variant: 'collector',
+      base: { pullRadius: 110 }, perLevel: { pullRadius: 22 },
+      desc: 'ジェムを自動で引き寄せる使い魔を呼ぶ',
+    },
+  ],
+  princess: [
+    {
+      id: 'royalAuthority', name: '王家の威光', icon: '👑', maxLevel: 5, type: 'statBoost',
+      stat: 'luck', perLevel: 0.15, desc: '運+0.15',
+    },
+    {
+      id: 'queensStrike', name: '女王の一撃', icon: '⚜️', maxLevel: 5, type: 'onHit', effect: 'execute',
+      base: { chance: 0.1, value: 0.12 }, perLevel: { chance: 0.015, value: 0.015 },
+      desc: '攻撃命中時、確率でHPが低い敵を即座に討つ',
+    },
+    {
+      id: 'guardianHalo', name: '守護の光輪', icon: '🕊️', maxLevel: 5, type: 'aura',
+      base: { cooldown: 4.5, damage: 7, radius: 80 }, perLevel: { damage: 2.5, radius: 10, cooldown: -0.2 },
+      desc: '一定間隔で光の輪が広がり周囲の敵にダメージ',
+    },
+  ],
+  escapee: [
+    {
+      id: 'fugitivesInstinct', name: '逃走者の勘', icon: '👣', maxLevel: 5, type: 'statBoost',
+      stat: 'critChance', perLevel: 0.02, desc: '会心率+2%',
+    },
+    {
+      id: 'survivalInstinct', name: '生存本能', icon: '🌱', maxLevel: 5, type: 'onHit', effect: 'lifesteal',
+      base: { chance: 0.15, value: 1.5 }, perLevel: { chance: 0.02, value: 0.6 },
+      desc: '攻撃命中時、確率でわずかにHP回復',
+    },
+    {
+      id: 'guidingSpirit', name: '道連れの精霊', icon: '🔥', maxLevel: 5, type: 'summon', variant: 'attacker',
+      base: { damage: 4, interval: 1.4, range: 160 }, perLevel: { damage: 2 },
+      desc: '近くの敵を自動で攻撃する精霊を呼ぶ',
+    },
+  ],
+  huntress: [
+    {
+      id: 'huntersReflexes', name: '狩人の反射神経', icon: '🎯', maxLevel: 5, type: 'statBoost',
+      stat: 'cooldown', perLevel: -0.05, desc: '攻撃間隔-5%',
+    },
+    {
+      id: 'criticalSweep', name: '会心の一薙ぎ', icon: '💫', maxLevel: 5, type: 'onHit', effect: 'bonusDamage',
+      base: { chance: 0.14, value: 8 }, perLevel: { chance: 0.02, value: 3 },
+      desc: '攻撃命中時、確率で追加ダメージ',
+    },
+    {
+      id: 'forestsWard', name: '森の守り', icon: '🍂', maxLevel: 5, type: 'aura',
+      base: { cooldown: 4.0, damage: 8, radius: 75 }, perLevel: { damage: 3, radius: 9, cooldown: -0.18 },
+      desc: '一定間隔で森の加護が広がり周囲の敵にダメージ',
+    },
+  ],
+  wanderer: [
+    {
+      id: 'discerningMerchant', name: '目利きの旅商人', icon: '🔍', maxLevel: 5, type: 'statBoost',
+      stat: 'pickupRange', perLevel: 8, desc: 'アイテム収集範囲+8',
+    },
+    {
+      id: 'weightOfGoods', name: '荷物の重み', icon: '🎒', maxLevel: 5, type: 'onHit', effect: 'lifesteal',
+      base: { chance: 0.1, value: 2 }, perLevel: { chance: 0.02, value: 0.8 },
+      desc: '攻撃命中時、確率でわずかにHP回復',
+    },
+    {
+      id: 'loyalPackmule', name: '忠実な荷運び', icon: '🐐', maxLevel: 5, type: 'summon', variant: 'collector',
+      base: { pullRadius: 100 }, perLevel: { pullRadius: 20 },
+      desc: 'ジェムを自動で引き寄せる荷運びを呼ぶ',
+    },
+  ],
+};
 
 // -------------------- META PROGRESSION (permanent shop upgrades) --------------------
 // Bought with coins earned per run (see game.js coinsForRun). Persist forever

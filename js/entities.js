@@ -1,5 +1,5 @@
 import { clamp, dist } from './utils.js';
-import { PLAYER_BASE, PASSIVES, PERMANENT_UPGRADES, BRANCH_DEFS } from './data.js';
+import { PLAYER_BASE, PASSIVES, PERMANENT_UPGRADES, BRANCH_DEFS, CHARACTER_SKILLS } from './data.js';
 import { tryLoadImage, tryLoadAnim } from './assets.js';
 import { getPermanentUpgrades } from './storage.js';
 
@@ -139,6 +139,11 @@ export class Player {
     this.kills = 0;
     this.weapons = []; // {id, level}
     this.passives = []; // {id, level}
+    // Character-specific skills (see data.js CHARACTER_SKILLS) - a separate
+    // pool from weapons/passives, scoped to this costume's own 3 skills,
+    // started unowned and leveled through the same level-up flow.
+    this.skills = []; // {id, level}
+    this.skillCds = {}; // per-skill-id cooldown timer, used by 'aura'-type skills
     this.invuln = 0;
     this.hitFlash = 0;
     this.animT = 0;
@@ -170,6 +175,17 @@ export class Player {
     for (const p of this.passives) {
       const def = PASSIVES[p.id];
       const total = def.perLevel * p.level;
+      if (def.stat === 'maxHP') base.maxHP += total;
+      else if (def.stat === 'moveSpeedMult') base.moveSpeedMult += total;
+      else base[def.stat] = (base[def.stat] ?? (def.stat === 'power' || def.stat === 'area' || def.stat === 'cooldown' || def.stat === 'xpMult' ? 1 : 0)) + total;
+    }
+    // Character-specific 'statBoost' skills fold in exactly like a passive,
+    // just sourced from this costume's own skill list instead of the
+    // shared PASSIVES table - see data.js CHARACTER_SKILLS.
+    for (const s of this.skills) {
+      const def = this.getSkillDef(s.id);
+      if (!def || def.type !== 'statBoost') continue;
+      const total = def.perLevel * s.level;
       if (def.stat === 'maxHP') base.maxHP += total;
       else if (def.stat === 'moveSpeedMult') base.moveSpeedMult += total;
       else base[def.stat] = (base[def.stat] ?? (def.stat === 'power' || def.stat === 'area' || def.stat === 'cooldown' || def.stat === 'xpMult' ? 1 : 0)) + total;
@@ -209,6 +225,17 @@ export class Player {
     const existing = this.passives.find(p => p.id === id);
     if (existing) existing.level++;
     else this.passives.push({ id, level: 1 });
+    this.recompute();
+  }
+
+  getSkillDef(id) {
+    const list = CHARACTER_SKILLS[this.costume.id];
+    return list && list.find(s => s.id === id);
+  }
+  addSkill(id) {
+    const existing = this.skills.find(s => s.id === id);
+    if (existing) existing.level++;
+    else this.skills.push({ id, level: 1 });
     this.recompute();
   }
 
@@ -628,6 +655,52 @@ export class FloatText {
     ctx.textAlign = 'center';
     ctx.fillStyle = this.color;
     ctx.fillText(this.text, sx, sy);
+    ctx.restore();
+  }
+}
+
+// A small floating helper spawned by a 'summon'-type character skill (see
+// data.js CHARACTER_SKILLS). Purely handles its own hover-orbit movement and
+// icon rendering here; the actual per-variant effect (attacker: find+damage
+// a nearby enemy, collector: mark nearby gems as magnet-pulled) is resolved
+// in game.js's update loop, which is where enemies[]/gems[]/damageEnemy()
+// already live - keeps this class a simple, game.js-independent visual.
+export class Companion {
+  constructor(skillId, variant, seedIndex = 0) {
+    this.skillId = skillId;
+    this.variant = variant;
+    this.angle = (seedIndex * 2.4) % (Math.PI * 2);
+    this.orbitR = 36 + (seedIndex % 3) * 10;
+    this.x = 0; this.y = 0;
+    this.cd = 0; // countdown until this companion may act again (attacker variant)
+  }
+  update(dt, player) {
+    this.angle += dt * 1.1;
+    const targetX = player.x + Math.cos(this.angle) * this.orbitR;
+    const targetY = player.y + Math.sin(this.angle) * this.orbitR * 0.6 - 14;
+    const ease = Math.min(1, dt * 6);
+    this.x += (targetX - this.x) * ease;
+    this.y += (targetY - this.y) * ease;
+    if (this.cd > 0) this.cd -= dt;
+  }
+  draw(ctx, cam) {
+    const sx = this.x - cam.x, sy = this.y - cam.y;
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+    ctx.fillStyle = this.variant === 'attacker' ? '#ff9a5a' : '#7fe0ff';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.variant === 'attacker' ? '🔥' : '🧲', 0, 0);
     ctx.restore();
   }
 }

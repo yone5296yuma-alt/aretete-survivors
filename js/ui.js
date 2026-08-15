@@ -1,6 +1,6 @@
 import {
   WEAPONS, EVOLVED_WEAPONS, PASSIVES, COSTUMES, STAGES, ENDLESS_CONFIG, PERMANENT_UPGRADES, upgradeCost, EVOLUTION_PAIRS,
-  SUPER_EVOLUTION_PAIRS, SUPER_EVOLVED_WEAPONS, BRANCH_DEFS, BRANCHABLE_WEAPONS,
+  SUPER_EVOLUTION_PAIRS, SUPER_EVOLVED_WEAPONS, BRANCH_DEFS, BRANCHABLE_WEAPONS, CHARACTER_SKILLS,
 } from './data.js';
 import { clamp } from './utils.js';
 import { isStageUnlocked, getCoins, getPermanentUpgrades, buyPermanentUpgrade } from './storage.js';
@@ -83,6 +83,17 @@ export function buildUpgradeChoices(player) {
       if (!ownedP.has(id)) choices.push({ kind: 'passive-new', id, def: PASSIVES[id], level: 1 });
     }
   }
+  // Character-specific skills (see data.js CHARACTER_SKILLS) - this
+  // costume's own 3 skills only, offered/leveled exactly like passives.
+  const ownedS = new Set(player.skills.map(s => s.id));
+  const mySkills = CHARACTER_SKILLS[player.costume.id] || [];
+  for (const s of player.skills) {
+    const def = mySkills.find(d => d.id === s.id);
+    if (def && s.level < def.maxLevel) choices.push({ kind: 'skill-up', id: s.id, def, level: s.level + 1 });
+  }
+  for (const def of mySkills) {
+    if (!ownedS.has(def.id)) choices.push({ kind: 'skill-new', id: def.id, def, level: 1 });
+  }
   // shuffle & take up to 3
   for (let i = choices.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -108,6 +119,24 @@ function weaponGainText(c) {
   return parts.join(' / ');
 }
 
+// what specifically improves by taking this skill-up choice, in plain text
+// (mirrors weaponGainText above, but skill defs use {base, perLevel} keyed
+// by mechanic-specific fields rather than the weapon shape)
+function skillGainText(c) {
+  if (!c.kind.startsWith('skill') || c.kind.endsWith('new')) return '';
+  const def = c.def;
+  if (def.type === 'statBoost') return '';
+  const parts = [];
+  const pl = def.perLevel || {};
+  if (pl.value) parts.push(`効果量+${pl.value}`);
+  if (pl.chance) parts.push(`発動率+${Math.round(pl.chance * 100)}%`);
+  if (pl.damage) parts.push(`威力+${pl.damage}`);
+  if (pl.radius) parts.push(`範囲+${pl.radius}`);
+  if (pl.cooldown) parts.push(`間隔-${Math.round(-pl.cooldown * 100) / 100}秒`);
+  if (pl.pullRadius) parts.push(`引き寄せ範囲+${pl.pullRadius}`);
+  return parts.join(' / ');
+}
+
 export function showLevelUp(choices, onPick) {
   const overlay = $('levelup-overlay');
   const row = $('levelup-cards');
@@ -115,11 +144,12 @@ export function showLevelUp(choices, onPick) {
   for (const c of choices) {
     const card = document.createElement('div');
     const isWeapon = c.kind.startsWith('weapon');
-    card.className = `upgrade-card ${isWeapon ? 'kind-weapon' : 'kind-stat'}`;
+    const isSkill = c.kind.startsWith('skill');
+    card.className = `upgrade-card ${isWeapon ? 'kind-weapon' : isSkill ? 'kind-skill' : 'kind-stat'}`;
     const isNew = c.kind.endsWith('new');
-    const gain = weaponGainText(c);
+    const gain = isSkill ? skillGainText(c) : weaponGainText(c);
     card.innerHTML = `
-      <div class="ukind">${isWeapon ? '⚔️ 武器' : '📊 強化'}</div>
+      <div class="ukind">${isWeapon ? '⚔️ 武器' : isSkill ? '✨ 固有スキル' : '📊 強化'}</div>
       <div class="uicon">${c.def.icon}</div>
       <div class="uname">${c.def.name}</div>
       <div class="ulvl">${isNew ? 'NEW' : 'Lv.' + c.level}</div>
@@ -230,7 +260,7 @@ export function renderCompendium(container, category) {
         </div>`;
       container.appendChild(div);
     }
-  } else {
+  } else if (category === 'evolution') {
     for (const pair of EVOLUTION_PAIRS) {
       const w = WEAPONS[pair.weapon], p = PASSIVES[pair.passive], e = EVOLVED_WEAPONS[pair.evolvesTo];
       const div = document.createElement('div');
@@ -244,6 +274,24 @@ export function renderCompendium(container, category) {
         </div>`;
       container.appendChild(div);
     }
+  } else if (category === 'skills') {
+    for (const costume of COSTUMES) {
+      const header = document.createElement('div');
+      header.className = 'compendium-costume-header';
+      header.textContent = `${costume.icon} ${costume.name}`;
+      container.appendChild(header);
+      for (const def of CHARACTER_SKILLS[costume.id] || []) {
+        const div = document.createElement('div');
+        div.className = 'comp-item kind-skill';
+        div.innerHTML = `
+          <div class="cicon">${def.icon}</div>
+          <div class="cinfo">
+            <div class="cname">${def.name}<span class="clevel">最大Lv.${def.maxLevel}</span></div>
+            <div class="cdesc">${def.desc}</div>
+          </div>`;
+        container.appendChild(div);
+      }
+    }
   }
 }
 
@@ -252,7 +300,7 @@ export function renderCompendium(container, category) {
 // evolution / super-evolution) - satisfies "見たい時に融合先を確認したい".
 export function renderLoadout(container, player) {
   container.innerHTML = '';
-  if (player.weapons.length === 0 && player.passives.length === 0) {
+  if (player.weapons.length === 0 && player.passives.length === 0 && player.skills.length === 0) {
     container.innerHTML = '<p class="loadout-empty">まだ何も装備していません</p>';
     return;
   }
@@ -295,6 +343,25 @@ export function renderLoadout(container, player) {
         <div class="cdesc">${def.desc}</div>
       </div>`;
     container.appendChild(div);
+  }
+  if (player.skills.length) {
+    const header = document.createElement('div');
+    header.className = 'loadout-section-header';
+    header.textContent = '✨ 固有スキル';
+    container.appendChild(header);
+    for (const s of player.skills) {
+      const def = player.getSkillDef(s.id);
+      if (!def) continue;
+      const div = document.createElement('div');
+      div.className = 'comp-item kind-skill';
+      div.innerHTML = `
+        <div class="cicon">${def.icon}</div>
+        <div class="cinfo">
+          <div class="cname">${def.name}<span class="clevel">Lv.${s.level}/${def.maxLevel}</span></div>
+          <div class="cdesc">${def.desc}</div>
+        </div>`;
+      container.appendChild(div);
+    }
   }
 }
 

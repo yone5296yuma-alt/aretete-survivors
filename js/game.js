@@ -1,6 +1,6 @@
 import { InputManager } from './input.js';
-import { Player, Enemy, Gem, Chest, Pickup, FloatText } from './entities.js';
-import { updateWeapons, tryEvolve, trySuperEvolve, findBranchCandidate } from './weapons.js';
+import { Player, Enemy, Gem, Chest, Pickup, FloatText, Companion } from './entities.js';
+import { updateWeapons, tryEvolve, trySuperEvolve, findBranchCandidate, Pulse } from './weapons.js';
 import { updateHUD, buildUpgradeChoices, showLevelUp, showEvolveNotice, showResult, fmtTime, renderLoadout, showBranchChoice } from './ui.js';
 import { ENEMY_TYPES } from './data.js';
 import { dist, clamp, randRange, pick, weightedPick } from './utils.js';
@@ -147,6 +147,7 @@ export class Game {
     this.chests = [];
     this.pickups = [];
     this.floatTexts = [];
+    this.companions = []; // spawned by 'summon'-type character skills, see applyChoice()
 
     this.elapsed = 0;
     this.kills = 0;
@@ -603,6 +604,49 @@ export class Game {
     }
     this.gems = this.gems.filter(g => !g.collected);
 
+    // Character skills: 'aura' ticks its own cooldown and spawns the same
+    // Pulse weapon auras use (centered on the player); 'onHit' is rolled
+    // inside damageEnemy() alongside the crit roll; 'summon' companions are
+    // updated + resolved here since this is where enemies[]/gems[] live.
+    for (const s of this.player.skills) {
+      const def = this.player.getSkillDef(s.id);
+      if (!def || def.type !== 'aura') continue;
+      const stats = { ...def.base };
+      for (let l = 2; l <= s.level; l++) for (const k in def.perLevel) stats[k] = (stats[k] ?? 0) + def.perLevel[k];
+      this.player.skillCds[s.id] = (this.player.skillCds[s.id] ?? 0) - dt;
+      if (this.player.skillCds[s.id] <= 0) {
+        this.player.skillCds[s.id] = stats.cooldown;
+        this.pulses.push(new Pulse(this.player.x, this.player.y, stats.radius, stats.damage, 'aura', 0, '#ffd76a', def.icon, null));
+      }
+    }
+    for (const comp of this.companions) {
+      comp.update(dt, this.player);
+      const skillEntry = this.player.skills.find(s => s.id === comp.skillId);
+      const def = this.player.getSkillDef(comp.skillId);
+      if (!skillEntry || !def) continue;
+      const stats = { ...def.base };
+      for (let l = 2; l <= skillEntry.level; l++) for (const k in def.perLevel) stats[k] = (stats[k] ?? 0) + def.perLevel[k];
+      if (comp.variant === 'attacker') {
+        if (comp.cd <= 0) {
+          let nearest = null, nd = stats.range;
+          for (const e of this.enemies) {
+            if (e.dead) continue;
+            const d = dist(comp.x, comp.y, e.x, e.y);
+            if (d < nd) { nd = d; nearest = e; }
+          }
+          if (nearest) {
+            comp.cd = stats.interval;
+            this.damageEnemy(nearest, stats.damage, 'companion', null);
+          }
+        }
+      } else if (comp.variant === 'collector') {
+        for (const g of this.gems) {
+          if (g.collected) continue;
+          if (dist(comp.x, comp.y, g.x, g.y) < stats.pullRadius) g.magnet = true;
+        }
+      }
+    }
+
     for (const c of this.chests) c.update(dt, this.player);
     for (const c of this.chests) {
       if (c.collected) this.openChest();
@@ -655,6 +699,24 @@ export class Game {
     if (canCrit && Math.random() < this.player.critChance) {
       finalDmg *= this.player.critMult;
       crit = true;
+    }
+    // Character 'onHit' skills - gated the same as crit so DoT ticks/
+    // explosion splash (which call this repeatedly) can't re-roll them.
+    if (canCrit) {
+      for (const s of this.player.skills) {
+        const def = this.player.getSkillDef(s.id);
+        if (!def || def.type !== 'onHit') continue;
+        const stats = { ...def.base };
+        for (let l = 2; l <= s.level; l++) for (const k in def.perLevel) stats[k] = (stats[k] ?? 0) + def.perLevel[k];
+        if (Math.random() >= stats.chance) continue;
+        if (def.effect === 'bonusDamage') {
+          finalDmg += stats.value;
+        } else if (def.effect === 'execute') {
+          if (enemy.hp / enemy.maxHp <= stats.value) finalDmg = enemy.hp;
+        } else if (def.effect === 'lifesteal') {
+          this.player.hp = clamp(this.player.hp + stats.value, 0, this.player.maxHP);
+        }
+      }
     }
     const killed = enemy.takeDamage(finalDmg);
     this.floatTexts.push(new FloatText(enemy.x, enemy.y - enemy.radius, Math.round(finalDmg).toString(),
@@ -727,6 +789,14 @@ export class Game {
   applyChoice(choice) {
     if (choice.kind === 'weapon-up' || choice.kind === 'weapon-new') {
       this.player.addWeapon(choice.id);
+    } else if (choice.kind === 'skill-up' || choice.kind === 'skill-new') {
+      this.player.addSkill(choice.id);
+      // A brand-new 'summon' skill needs its Companion spawned once here -
+      // leveling an existing one just scales the stats read fresh each tick
+      // in the update loop, no new companion needed.
+      if (choice.kind === 'skill-new' && choice.def.type === 'summon') {
+        this.companions.push(new Companion(choice.id, choice.def.variant, this.companions.length));
+      }
     } else {
       this.player.addPassive(choice.id);
     }
@@ -990,6 +1060,7 @@ export class Game {
     for (const p of this.pickups) p.draw(ctx, this.cam);
     for (const g of this.gems) g.draw(ctx, this.cam);
     for (const e of this.enemies) e.draw(ctx, this.cam);
+    for (const comp of this.companions) comp.draw(ctx, this.cam);
     this.player.draw(ctx, this.cam);
 
     for (const p of this.projectiles) p.draw(ctx, this.cam);

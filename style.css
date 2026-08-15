@@ -235,6 +235,11 @@ body.touch .touch-stick-zone{display:block;}
 .upgrade-card.evolve{border-color:var(--gold);box-shadow:0 0 16px rgba(255,215,106,0.5);}
 .upgrade-card.super-evolve{border-color:#ffe45a;box-shadow:0 0 22px rgba(255,228,90,0.7);}
 .upgrade-card.kind-branch{border-top-color:#c76bd6;}
+.upgrade-card.kind-skill{border-top-color:#5ec8ff;}
+.comp-item.kind-skill{border-color:rgba(94,200,255,0.35);}
+.loadout-section-header,.compendium-costume-header{
+  font-size:0.78rem;font-weight:700;color:#5ec8ff;margin:12px 0 6px;padding-left:2px;
+}
 
 .boss-warning{
   position:absolute;top:20%;left:50%;transform:translateX(-50%);
