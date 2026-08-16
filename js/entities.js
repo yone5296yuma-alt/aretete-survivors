@@ -2,6 +2,7 @@ import { clamp, dist } from './utils.js';
 import { PLAYER_BASE, PASSIVES, PERMANENT_UPGRADES, BRANCH_DEFS, CHARACTER_SKILLS } from './data.js';
 import { tryLoadImage, tryLoadAnim } from './assets.js';
 import { getPermanentUpgrades } from './storage.js';
+import { getIconImg } from './icons.js';
 
 const TIER_COLORS = { 1: '#a8d8b0', 2: '#e8c15a', 3: '#e8703f' };
 
@@ -122,6 +123,48 @@ function drawSpriteOutlineAura(ctx, animEntry, clipName, t, w, h, color, strengt
   ctx.globalAlpha = Math.min(1, strength);
   ctx.drawImage(aura, -dw / 2, -dh / 2, dw, dh);
   ctx.restore();
+}
+
+// Small flat-color square particles (matching the pixel-art look rather than
+// smooth circles), driven by spawnBurst() from game.js on hit/kill/level-up.
+export class Particle {
+  constructor(x, y, color, angle, speed, size, life) {
+    this.x = x; this.y = y;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.color = color;
+    this.size = size;
+    this.life = life;
+    this.maxLife = life;
+  }
+  update(dt) {
+    this.life -= dt;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.vy += 60 * dt; // light gravity
+    this.vx *= 0.94; this.vy *= 0.96;
+  }
+  draw(ctx, cam) {
+    const sx = this.x - cam.x, sy = this.y - cam.y;
+    ctx.save();
+    ctx.globalAlpha = clamp(this.life / this.maxLife, 0, 1);
+    ctx.fillStyle = this.color;
+    ctx.fillRect(sx - this.size / 2, sy - this.size / 2, this.size, this.size);
+    ctx.restore();
+  }
+}
+
+export function spawnBurst(list, x, y, color, count = 8, opts = {}) {
+  const minSpeed = opts.minSpeed ?? 60, maxSpeed = opts.maxSpeed ?? 160;
+  const minSize = opts.minSize ?? 3, maxSize = opts.maxSize ?? 5;
+  const minLife = opts.minLife ?? 0.25, maxLife = opts.maxLife ?? 0.45;
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = minSpeed + Math.random() * (maxSpeed - minSpeed);
+    const size = minSize + Math.random() * (maxSize - minSize);
+    const life = minLife + Math.random() * (maxLife - minLife);
+    list.push(new Particle(x, y, color, angle, speed, size, life));
+  }
 }
 
 function computeEnemyXP(hp, damage) {
@@ -471,6 +514,9 @@ export class Enemy {
         if (this.elite || this.boss) {
           drawSpriteOutlineAura(ctx, this.animEntry, 'walk', this.animT, w, h, tierColor, 0.7);
         }
+        if (this.hitFlash > 0) {
+          drawSpriteOutlineAura(ctx, this.animEntry, 'walk', this.animT, w, h, '#ffffff', Math.min(1, this.hitFlash / 0.1));
+        }
         drawAnimFrame(ctx, this.animEntry, 'walk', this.animT, w, h, this.variant);
       } else {
         const walk = Math.sin(this.animT * 10) * 0.06;
@@ -478,7 +524,7 @@ export class Enemy {
         ctx.drawImage(this.imgEntry.img, -fw / 2, -fh / 2, fw, fh);
       }
       ctx.scale(this.facing, 1); // undo, so the flash/halo below stay unflipped
-      if (this.hitFlash > 0) {
+      if (this.hitFlash > 0 && !hasAnim) {
         ctx.globalAlpha = 0.6;
         ctx.fillStyle = '#ffffff';
         ctx.beginPath(); ctx.ellipse(0, 0, w * 0.5, h * 0.5, 0, 0, Math.PI * 2); ctx.fill();
@@ -575,10 +621,15 @@ export class Chest {
     const bob = Math.sin(this.t * 3) * 3;
     ctx.save();
     ctx.translate(sx, sy + bob);
-    ctx.font = '28px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('📦', 0, 0);
+    const img = getIconImg('chest');
+    if (img && img.loaded) {
+      ctx.drawImage(img.img, -18, -18, 36, 36);
+    } else {
+      ctx.font = '28px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('📦', 0, 0);
+    }
     ctx.restore();
   }
 }
@@ -697,10 +748,16 @@ export class Companion {
     ctx.strokeStyle = '#1a1a2e';
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(this.variant === 'attacker' ? '🔥' : '🧲', 0, 0);
+    const iconId = this.variant === 'attacker' ? 'companionAttacker' : 'companionCollector';
+    const img = getIconImg(iconId);
+    if (img && img.loaded) {
+      ctx.drawImage(img.img, -9, -9, 18, 18);
+    } else {
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(this.variant === 'attacker' ? '🔥' : '🧲', 0, 0);
+    }
     ctx.restore();
   }
 }

@@ -112,6 +112,17 @@ html,body{
 
 .link-btn{text-decoration:none;box-sizing:border-box;}
 
+.icon-img{image-rendering:pixelated;display:inline-block;vertical-align:middle;object-fit:contain;}
+.icon-img-fallback{display:inline-block;vertical-align:middle;}
+.icon-img.icon-inline{width:16px;height:16px;vertical-align:-3px;}
+.costume-swatch .icon-img{width:44px;height:44px;}
+.costume-card .cweapon .icon-img{width:15px;height:15px;vertical-align:-2px;}
+.shop-item .sicon .icon-img{width:26px;height:26px;}
+.comp-item .cicon .icon-img{width:28px;height:28px;}
+.upgrade-card .uicon .icon-img{width:32px;height:32px;}
+.weapon-tray .wicon .icon-img{width:20px;height:20px;}
+.weapon-tray .wicon .branch-badge .icon-img{width:10px;height:10px;}
+
 .rank-note{text-align:center;font-size:0.75rem;color:#b8c8bd;margin:-6px 0 12px;}
 .ranking-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;margin-bottom:14px;}
 .rank-row{
@@ -163,11 +174,16 @@ html,body{
 .comp-item.evolved{border-color:var(--gold);box-shadow:0 0 10px rgba(255,215,106,0.3);}
 .comp-item .cicon{font-size:1.6rem;flex-shrink:0;width:1.8rem;text-align:center;}
 .comp-item .cinfo{flex:1;min-width:0;}
-.comp-item .cname{font-weight:700;font-size:0.85rem;}
-.comp-item .cname .clevel{color:var(--gold);font-weight:800;margin-left:6px;font-size:0.75rem;}
-.comp-item .cdesc{font-size:0.72rem;color:#cfe3ff;line-height:1.4;margin-top:2px;}
-.comp-item .cgrowth{font-size:0.68rem;color:var(--bubble-blue);margin-top:4px;}
-.comp-item .crecipe{font-size:0.72rem;color:#e7b8ff;margin-top:4px;line-height:1.5;}
+.comp-item .cname{font-weight:700;font-size:0.95rem;}
+.comp-item .cname .clevel{color:var(--gold);font-weight:800;margin-left:6px;font-size:0.8rem;}
+.comp-item .cdesc{font-size:0.8rem;color:#e2edff;line-height:1.5;margin-top:3px;}
+.comp-item .cgrowth{font-size:0.74rem;color:var(--bubble-blue);margin-top:4px;}
+.comp-item .crecipe{font-size:0.78rem;color:#f0d0ff;margin-top:4px;line-height:1.6;}
+.comp-item .preview-canvas{
+  width:64px;height:64px;flex-shrink:0;border-radius:8px;
+  background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.15);
+  image-rendering:pixelated;
+}
 .loadout-empty{text-align:center;color:#b8c8bd;font-size:0.85rem;padding:20px 0;}
 
 /* ---------- Game screen ---------- */
@@ -180,19 +196,19 @@ html,body{
 .hp-wrap{display:flex;align-items:center;gap:6px;flex:1;max-width:220px;}
 .hp-bar{flex:1;height:14px;border-radius:8px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.3);overflow:hidden;}
 .hp-fill{height:100%;width:100%;background:linear-gradient(90deg,#ff5470,#ff8fa3);transition:width .15s;}
-#hp-text{font-size:0.7rem;white-space:nowrap;text-shadow:0 1px 2px #000;}
-.timer{font-size:1.1rem;font-weight:700;background:rgba(0,0,0,0.45);padding:4px 12px;border-radius:10px;letter-spacing:1px;}
+#hp-text{font-size:0.8rem;font-weight:700;white-space:nowrap;text-shadow:0 1px 3px #000,0 0 4px rgba(0,0,0,0.8);}
+.timer{font-size:1.25rem;font-weight:800;background:rgba(0,0,0,0.6);padding:4px 12px;border-radius:10px;letter-spacing:1px;text-shadow:0 1px 3px #000;}
 .hud-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
-#kill-count{font-size:0.85rem;background:rgba(0,0,0,0.45);padding:4px 8px;border-radius:8px;}
+#kill-count{font-size:0.95rem;font-weight:700;background:rgba(0,0,0,0.6);padding:4px 8px;border-radius:8px;text-shadow:0 1px 3px #000;}
 .icon-btn{pointer-events:auto;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.3);color:#fff;
   width:34px;height:34px;border-radius:50%;font-size:1rem;cursor:pointer;}
 
 .xp-bar{margin-top:8px;height:8px;border-radius:6px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.25);overflow:hidden;}
 .xp-fill{height:100%;width:0%;background:linear-gradient(90deg,#7fe6a8,#d6ffe0);transition:width .15s;}
 .level-badge{position:absolute;left:12px;top:64px;background:var(--gold);color:#3a2600;font-weight:800;
-  font-size:0.7rem;padding:2px 8px;border-radius:999px;box-shadow:0 2px 4px rgba(0,0,0,0.4);}
-.floor-badge{position:absolute;left:76px;top:64px;background:var(--pink);color:#3a1a3a;font-weight:800;
-  font-size:0.7rem;padding:2px 8px;border-radius:999px;box-shadow:0 2px 4px rgba(0,0,0,0.4);}
+  font-size:0.8rem;padding:3px 10px;border-radius:999px;box-shadow:0 2px 5px rgba(0,0,0,0.55);}
+.floor-badge{position:absolute;left:84px;top:64px;background:var(--pink);color:#3a1a3a;font-weight:800;
+  font-size:0.8rem;padding:3px 10px;border-radius:999px;box-shadow:0 2px 5px rgba(0,0,0,0.55);}
 .floor-badge.hidden{display:none;}
 
 .weapon-tray{display:flex;gap:4px;margin-top:10px;}

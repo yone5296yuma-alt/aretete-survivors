@@ -6,6 +6,8 @@ server/.env
 server/server.log
 tools/_render_out/
 tools/_calibrate/
+tools/_icon_samples/
+.claude/
 tools/__pycache__/
 tools/cloudflared.exe
 tools/*.log

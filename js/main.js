@@ -1,5 +1,5 @@
 import { COSTUMES, STAGES, ENDLESS_CONFIG, registerCustomEnemies } from './data.js';
-import { renderStageList, renderCostumeList, renderLeaderboard, renderShop, renderCompendium } from './ui.js';
+import { renderStageList, renderCostumeList, renderLeaderboard, renderShop, renderCompendium, disposeCompendiumPreviews } from './ui.js';
 import { Game } from './game.js';
 import { unlockAudio } from './audio.js';
 import { getLeaderboard, getHandedness, setHandedness, getCoins } from './storage.js';
@@ -122,6 +122,7 @@ $('btn-shop').onclick = () => {
 
 $('btn-howto').onclick = () => show('screen-howto');
 document.querySelectorAll('.btn-back').forEach(b => b.onclick = () => { refreshTitleCoins(); show('screen-title'); });
+document.querySelector('#screen-compendium .btn-back').addEventListener('click', disposeCompendiumPreviews);
 
 let compendiumTab = 'weapons';
 function refreshCompendium() {

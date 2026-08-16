@@ -3,6 +3,7 @@ import {
   WEAPONS, EVOLVED_WEAPONS, EVOLUTION_PAIRS, PASSIVES,
   SUPER_EVOLUTION_PAIRS, SUPER_EVOLVED_WEAPONS, BRANCH_DEFS, BRANCHABLE_WEAPONS,
 } from './data.js';
+import { getIconImg } from './icons.js';
 
 export function getDef(id) {
   return WEAPONS[id] || EVOLVED_WEAPONS[id] || SUPER_EVOLVED_WEAPONS[id];
@@ -39,7 +40,7 @@ function nearestEnemy(x, y, enemies, maxRange = Infinity) {
 // visual gets its own colored backdrop disc drawn first - the projectile
 // stays clearly visible and color-coded even where the emoji itself doesn't
 // render in color. Evolved (aura:true) weapons get an extra glowing ring.
-function drawIconBadge(ctx, radius, color, icon, aura, spinT) {
+function drawIconBadge(ctx, radius, color, icon, aura, spinT, iconId) {
   if (aura) {
     const pulse = 0.5 + 0.5 * Math.sin(spinT * 6);
     ctx.save();
@@ -58,14 +59,20 @@ function drawIconBadge(ctx, radius, color, icon, aura, spinT) {
   ctx.lineWidth = 1.5;
   ctx.strokeStyle = 'rgba(20,15,10,0.8)';
   ctx.stroke();
-  ctx.font = `${Math.round(radius * 1.5)}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(icon, 0, 0);
+  const iconImg = iconId ? getIconImg(iconId) : null;
+  if (iconImg && iconImg.loaded) {
+    const d = radius * 1.6;
+    ctx.drawImage(iconImg.img, -d / 2, -d / 2, d, d);
+  } else {
+    ctx.font = `${Math.round(radius * 1.5)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(icon, 0, 0);
+  }
 }
 
 export class Projectile {
-  constructor(x, y, angle, speed, damage, pierce, radius, icon, life = 3, kind = 'straight', range = 0, color = '#cccccc', aura = false, branch = null) {
+  constructor(x, y, angle, speed, damage, pierce, radius, icon, life = 3, kind = 'straight', range = 0, color = '#cccccc', aura = false, branch = null, iconId = null) {
     this.x = x; this.y = y;
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed;
@@ -75,6 +82,7 @@ export class Projectile {
     this.hitSet = new Set();
     this.radius = radius;
     this.icon = icon;
+    this.iconId = iconId;
     this.color = color;
     this.aura = aura;
     this.branch = branch;
@@ -110,17 +118,18 @@ export class Projectile {
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(this.spin);
-    drawIconBadge(ctx, this.radius, this.color, this.icon, this.aura, this.spin);
+    drawIconBadge(ctx, this.radius, this.color, this.icon, this.aura, this.spin, this.iconId);
     ctx.restore();
   }
 }
 
 export class Pulse {
   // expanding ring (aura) or delayed explosion (nova)
-  constructor(x, y, maxRadius, damage, kind, telegraph = 0, color = '#8a6a4a', icon = '🪵', branch = null) {
+  constructor(x, y, maxRadius, damage, kind, telegraph = 0, color = '#8a6a4a', icon = '🪵', branch = null, iconId = null) {
     this.x = x; this.y = y;
     this.color = color;
     this.icon = icon;
+    this.iconId = iconId;
     this.branch = branch;
     this.maxRadius = maxRadius;
     this.radius = kind === 'nova' ? maxRadius : 0;
@@ -158,7 +167,7 @@ export class Pulse {
       return ctx.restore();
     }
     if (this.kind === 'nova') {
-      drawIconBadge(ctx, 17, this.color, this.icon, false, 0);
+      drawIconBadge(ctx, 17, this.color, this.icon, false, 0, this.iconId);
       ctx.strokeStyle = `rgba(255,150,80,${0.5 * (1 - this.t / this.dur)})`;
       ctx.lineWidth = 4;
       ctx.beginPath(); ctx.arc(0, 0, this.maxRadius, 0, Math.PI * 2); ctx.stroke();
@@ -209,7 +218,7 @@ export class OrbitGroup {
       const sx = b.x - cam.x, sy = b.y - cam.y;
       ctx.save();
       ctx.translate(sx, sy);
-      drawIconBadge(ctx, b.r, def.color || '#cccccc', def.icon || '🌙', !!def.aura, this.angle);
+      drawIconBadge(ctx, b.r, def.color || '#cccccc', def.icon || '🌙', !!def.aura, this.angle, this.weaponId);
       ctx.restore();
     }
   }
@@ -301,7 +310,7 @@ export function updateWeapons(game, dt) {
         if (target) angle = angleTo(player.x, player.y, target.x, target.y) + (i - (count - 1) / 2) * 0.18;
         else angle = Math.random() * Math.PI * 2;
         const radius = 9 * Math.sqrt(stats.area ?? 1);
-        game.projectiles.push(new Projectile(player.x, player.y, angle, stats.speed, stats.damage, stats.pierce, radius, def.icon, 3.2, 'straight', 0, def.color, !!def.aura, w.branch));
+        game.projectiles.push(new Projectile(player.x, player.y, angle, stats.speed, stats.damage, stats.pierce, radius, def.icon, 3.2, 'straight', 0, def.color, !!def.aura, w.branch, w.id));
       }
     } else if (def.behavior === 'spread') {
       const count = Math.max(1, stats.count ?? 1);
@@ -309,7 +318,7 @@ export function updateWeapons(game, dt) {
       for (let i = 0; i < count; i++) {
         const angle = baseA + (Math.PI * 2 * i) / count;
         const radius = 7 * Math.sqrt(stats.area ?? 1);
-        game.projectiles.push(new Projectile(player.x, player.y, angle, stats.speed, stats.damage, stats.pierce, radius, def.icon, 2.4, 'straight', 0, def.color, !!def.aura, w.branch));
+        game.projectiles.push(new Projectile(player.x, player.y, angle, stats.speed, stats.damage, stats.pierce, radius, def.icon, 2.4, 'straight', 0, def.color, !!def.aura, w.branch, w.id));
       }
     } else if (def.behavior === 'boomerang') {
       const count = Math.max(1, stats.count ?? 1);
@@ -318,7 +327,7 @@ export function updateWeapons(game, dt) {
         const angle = target ? angleTo(player.x, player.y, target.x, target.y) : Math.random() * Math.PI * 2;
         const spread = angle + (i - (count - 1) / 2) * 0.5;
         const radius = 12 * Math.sqrt(stats.area ?? 1);
-        game.projectiles.push(new Projectile(player.x, player.y, spread, stats.speed, stats.damage, stats.pierce, radius, def.icon, 4, 'boomerang', stats.range, def.color, !!def.aura, w.branch));
+        game.projectiles.push(new Projectile(player.x, player.y, spread, stats.speed, stats.damage, stats.pierce, radius, def.icon, 4, 'boomerang', stats.range, def.color, !!def.aura, w.branch, w.id));
       }
     } else if (def.behavior === 'nova') {
       const count = Math.max(1, stats.count ?? 1);
@@ -326,10 +335,10 @@ export function updateWeapons(game, dt) {
         const target = nearestEnemy(player.x + (Math.random() - 0.5) * 300, player.y + (Math.random() - 0.5) * 300, game.enemies, 700);
         const px = target ? target.x : player.x + (Math.random() - 0.5) * 300;
         const py = target ? target.y : player.y + (Math.random() - 0.5) * 300;
-        game.pulses.push(new Pulse(px, py, stats.radius * (stats.area ?? 1), stats.damage, 'nova', 0.5, def.color, def.icon, w.branch));
+        game.pulses.push(new Pulse(px, py, stats.radius * (stats.area ?? 1), stats.damage, 'nova', 0.5, def.color, def.icon, w.branch, w.id));
       }
     } else if (def.behavior === 'aura') {
-      game.pulses.push(new Pulse(player.x, player.y, stats.radius * (stats.area ?? 1), stats.damage, 'aura', 0, '#8a6a4a', '🪵', w.branch));
+      game.pulses.push(new Pulse(player.x, player.y, stats.radius * (stats.area ?? 1), stats.damage, 'aura', 0, def.color, def.icon, w.branch, w.id));
     }
   }
 }

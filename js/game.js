@@ -1,5 +1,5 @@
 import { InputManager } from './input.js';
-import { Player, Enemy, Gem, Chest, Pickup, FloatText, Companion } from './entities.js';
+import { Player, Enemy, Gem, Chest, Pickup, FloatText, Companion, spawnBurst } from './entities.js';
 import { updateWeapons, tryEvolve, trySuperEvolve, findBranchCandidate, Pulse } from './weapons.js';
 import { updateHUD, buildUpgradeChoices, showLevelUp, showEvolveNotice, showResult, fmtTime, renderLoadout, showBranchChoice } from './ui.js';
 import { ENEMY_TYPES } from './data.js';
@@ -148,6 +148,8 @@ export class Game {
     this.pickups = [];
     this.floatTexts = [];
     this.companions = []; // spawned by 'summon'-type character skills, see applyChoice()
+    this.particles = [];
+    this.shakeT = 0; this.shakeDur = 0.15; this.shakeMag = 0;
 
     this.elapsed = 0;
     this.kills = 0;
@@ -474,6 +476,7 @@ export class Game {
   update(dt) {
     if (this.paused || this.gameOver || this.showingCard) return;
     this.elapsed += dt;
+    if (this.shakeT > 0) this.shakeT -= dt;
 
     this.player.update(dt, this.input);
     this._resolveObstacleCollisions();
@@ -517,6 +520,7 @@ export class Game {
       this.enemies.push(this.boss);
       this.flashWarning('☠️ ボス出現！ ☠️');
       SFX.bossWarn();
+      this.shake(10, 0.4);
     }
 
     // chest timer
@@ -546,7 +550,7 @@ export class Game {
     }
 
     for (const e of this.enemies) e.update(dt, this.player);
-    if (this.player.hp < hpBeforeContact) SFX.hurt();
+    if (this.player.hp < hpBeforeContact) { SFX.hurt(); this.shake(4, 0.15); }
     // status-effect DoT ticks (poison branch) - runs on every living enemy
     // each frame, independent of which weapon/hit originally applied it
     for (const e of this.enemies) {
@@ -576,6 +580,7 @@ export class Game {
     for (const pu of this.pulses) {
       pu.update(dt);
       if (pu.kind === 'nova' && pu.exploded) {
+        this.shake(6, 0.2);
         for (const e of this.enemies) {
           if (e.dead || pu.hitSet.has(e.uid)) continue;
           if (dist(pu.x, pu.y, e.x, e.y) < pu.maxRadius + e.radius) {
@@ -678,6 +683,9 @@ export class Game {
     for (const ft of this.floatTexts) ft.update(dt);
     this.floatTexts = this.floatTexts.filter(f => f.life > 0);
 
+    for (const pt of this.particles) pt.update(dt);
+    this.particles = this.particles.filter(pt => pt.life > 0);
+
     // win condition: boss defeated
     if (this.boss && this.boss.dead) return this.endGame(true);
 
@@ -721,6 +729,8 @@ export class Game {
     const killed = enemy.takeDamage(finalDmg);
     this.floatTexts.push(new FloatText(enemy.x, enemy.y - enemy.radius, Math.round(finalDmg).toString(),
       crit ? '#ff5a5a' : (enemy.elite || enemy.boss ? '#ffd76a' : '#ffffff')));
+    spawnBurst(this.particles, enemy.x, enemy.y, crit ? '#ff5a5a' : '#ffe08a', 5,
+      { minSpeed: 40, maxSpeed: 120, minSize: 2, maxSize: 4, minLife: 0.2, maxLife: 0.35 });
 
     if (branch === 'poison' && !enemy.dead) {
       enemy.poisonDps = Math.max(enemy.poisonDps || 0, finalDmg * 0.18);
@@ -740,6 +750,8 @@ export class Game {
       enemy._justDied = false;
       this.kills++;
       this.gems.push(new Gem(enemy.x, enemy.y, enemy.xp));
+      spawnBurst(this.particles, enemy.x, enemy.y, enemy.boss ? '#ff2b4a' : enemy.elite ? '#ffd76a' : '#ffffff', 14,
+        { minSpeed: 80, maxSpeed: 220, minSize: 3, maxSize: 6, minLife: 0.3, maxLife: 0.5 });
       SFX.kill();
     }
   }
@@ -783,6 +795,8 @@ export class Game {
     const choices = buildUpgradeChoices(this.player);
     if (choices.length === 0) { this.showingCard = false; return; }
     SFX.levelUp();
+    spawnBurst(this.particles, this.player.x, this.player.y, '#ffe08a', 20,
+      { minSpeed: 60, maxSpeed: 200, minSize: 3, maxSize: 6, minLife: 0.35, maxLife: 0.6 });
     showLevelUp(choices, (choice) => this.applyChoice(choice));
   }
 
@@ -803,6 +817,12 @@ export class Game {
     this.player.recompute();
     this.showingCard = false;
     if (this.pendingLevelUps > 0) { this.pendingLevelUps--; this.presentLevelUp(); }
+  }
+
+  shake(mag, dur = 0.15) {
+    this.shakeMag = Math.max(this.shakeMag, mag);
+    this.shakeDur = dur;
+    this.shakeT = dur;
   }
 
   flashWarning(text) {
@@ -856,6 +876,11 @@ export class Game {
     const ctx = this.ctx;
     const theme = this.bgTheme;
     ctx.clearRect(0, 0, this.viewW, this.viewH);
+    ctx.save();
+    if (this.shakeT > 0) {
+      const amt = this.shakeMag * (this.shakeT / this.shakeDur);
+      ctx.translate((Math.random() - 0.5) * amt * 2, (Math.random() - 0.5) * amt * 2);
+    }
     const g = ctx.createLinearGradient(0, 0, 0, this.viewH);
     g.addColorStop(0, theme.top);
     g.addColorStop(1, theme.bottom);
@@ -1066,8 +1091,10 @@ export class Game {
     for (const p of this.projectiles) p.draw(ctx, this.cam);
     for (const pu of this.pulses) pu.draw(ctx, this.cam);
     for (const w of this.player.weapons) if (w._orbit) w._orbit.draw(ctx, this.cam);
+    for (const pt of this.particles) pt.draw(ctx, this.cam);
     for (const ft of this.floatTexts) ft.draw(ctx, this.cam);
 
+    ctx.restore();
     updateHUD(this.player, this.elapsed, this.kills, this.mode === 'endless' ? this.currentFloor() : null);
   }
 

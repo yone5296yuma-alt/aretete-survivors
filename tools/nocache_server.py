@@ -8,9 +8,10 @@ wrapper just adds no-store headers to every response before falling back to
 the normal static file handling.
 """
 import http.server
+import os
 import sys
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8790
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get('PORT', 8790))
 
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):

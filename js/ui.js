@@ -5,6 +5,8 @@ import {
 import { clamp } from './utils.js';
 import { isStageUnlocked, getCoins, getPermanentUpgrades, buyPermanentUpgrade } from './storage.js';
 import { syncLocalToCloud } from './api.js';
+import { iconTag } from './icons.js';
+import { mountWeaponPreview, mountSkillPreview } from './preview.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -43,11 +45,11 @@ export function updateHUD(player, elapsed, killCount, floor = null) {
     const tierColor = w.superEvolved ? '#ffe45a' : w.evolved ? '#ff8fc7' : w.level >= 5 ? '#ffd76a' : w.level >= 3 ? '#7fe6a8' : 'rgba(255,255,255,0.3)';
     div.style.borderColor = tierColor;
     if (w.evolved || w.level >= 5) div.style.boxShadow = `0 0 6px ${tierColor}`;
-    div.textContent = def.icon;
+    div.innerHTML = iconTag(w.id, def.icon);
     if (w.branch) {
       const b = document.createElement('span');
       b.className = 'branch-badge';
-      b.textContent = BRANCH_DEFS[w.branch].icon;
+      b.innerHTML = iconTag(w.branch, BRANCH_DEFS[w.branch].icon);
       div.appendChild(b);
     }
     const lvl = document.createElement('span');
@@ -150,7 +152,7 @@ export function showLevelUp(choices, onPick) {
     const gain = isSkill ? skillGainText(c) : weaponGainText(c);
     card.innerHTML = `
       <div class="ukind">${isWeapon ? '⚔️ 武器' : isSkill ? '✨ 固有スキル' : '📊 強化'}</div>
-      <div class="uicon">${c.def.icon}</div>
+      <div class="uicon">${iconTag(c.id, c.def.icon)}</div>
       <div class="uname">${c.def.name}</div>
       <div class="ulvl">${isNew ? 'NEW' : 'Lv.' + c.level}</div>
       <div class="udesc">${c.def.desc}</div>
@@ -168,7 +170,7 @@ export function showEvolveNotice(pair, onContinue, isSuper = false) {
   const def = isSuper ? SUPER_EVOLVED_WEAPONS[pair.evolvesTo] : EVOLVED_WEAPONS[pair.evolvesTo];
   row.innerHTML = `
     <div class="upgrade-card ${isSuper ? 'super-evolve' : 'evolve'}" style="width:220px;">
-      <div class="uicon">${def.icon}</div>
+      <div class="uicon">${iconTag(pair.evolvesTo, def.icon)}</div>
       <div class="uname">${def.name}</div>
       <div class="ulvl">${isSuper ? '超進化！！' : '進化！'}</div>
       <div class="udesc">${def.desc}</div>
@@ -188,7 +190,7 @@ export function showBranchChoice(weaponSlot, onPick) {
   row.innerHTML = '';
   const header = document.createElement('div');
   header.style.cssText = 'width:100%;text-align:center;margin-bottom:6px;font-size:0.85rem;color:#e7b8ff;';
-  header.textContent = `${wdef.icon} ${wdef.name} が特化の分岐点に到達！`;
+  header.innerHTML = `${iconTag(weaponSlot.id, wdef.icon, 'icon-img icon-inline')} ${wdef.name} が特化の分岐点に到達！`;
   row.appendChild(header);
   for (const id in BRANCH_DEFS) {
     const b = BRANCH_DEFS[id];
@@ -196,7 +198,7 @@ export function showBranchChoice(weaponSlot, onPick) {
     card.className = 'upgrade-card kind-branch';
     card.innerHTML = `
       <div class="ukind">🔱 武器特化</div>
-      <div class="uicon">${b.icon}</div>
+      <div class="uicon">${iconTag(id, b.icon)}</div>
       <div class="uname">${b.name}</div>
       <div class="udesc">${b.desc}</div>
       <div class="ugain">威力${Math.round((b.dmgMult - 1) * 100)}%${b.critBonus ? ` / 会心率+${Math.round(b.critBonus * 100)}%` : ''}</div>
@@ -225,9 +227,30 @@ function weaponGrowthSummary(def) {
   return parts.join(' / ') || '進化専用武器';
 }
 
+// Live preview canvases mounted by the current renderCompendium() call - a
+// RAF loop per canvas, so they must be disposed whenever the compendium
+// re-renders (tab switch or leaving/reopening the screen) or they'd leak.
+let activePreviews = [];
+export function disposeCompendiumPreviews() { disposePreviews(); }
+function disposePreviews() {
+  for (const p of activePreviews) p.dispose();
+  activePreviews = [];
+}
+function appendPreviewCanvas(container, mountFn) {
+  const canvas = document.createElement('canvas');
+  canvas.className = 'preview-canvas';
+  canvas.width = 64;
+  canvas.height = 64;
+  container.appendChild(canvas);
+  const handle = mountFn(canvas);
+  if (handle) activePreviews.push(handle);
+  else canvas.remove();
+}
+
 // Browsable reference (title screen, not tied to a run) for weapon/passive
 // per-level growth and which pairs merge into which evolved weapon.
 export function renderCompendium(container, category) {
+  disposePreviews();
   container.innerHTML = '';
   if (category === 'weapons') {
     for (const id in WEAPONS) {
@@ -236,14 +259,15 @@ export function renderCompendium(container, category) {
       const div = document.createElement('div');
       div.className = 'comp-item';
       div.innerHTML = `
-        <div class="cicon">${def.icon}</div>
+        <div class="cicon">${iconTag(id, def.icon)}</div>
         <div class="cinfo">
           <div class="cname">${def.name}<span class="clevel">最大Lv.${def.maxLevel}</span></div>
           <div class="cdesc">${def.desc}</div>
           <div class="cgrowth">${weaponGrowthSummary(def)}</div>
-          ${evo ? `<div class="crecipe">🔗 最大Lv + ${PASSIVES[evo.passive].icon}${PASSIVES[evo.passive].name}(最大Lv)を両方揃えて宝箱を開けると → ${EVOLVED_WEAPONS[evo.evolvesTo].icon}${EVOLVED_WEAPONS[evo.evolvesTo].name}に進化</div>` : ''}
+          ${evo ? `<div class="crecipe">🔗 最大Lv + ${iconTag(evo.passive, PASSIVES[evo.passive].icon, 'icon-img icon-inline')}${PASSIVES[evo.passive].name}(最大Lv)を両方揃えて宝箱を開けると → ${iconTag(evo.evolvesTo, EVOLVED_WEAPONS[evo.evolvesTo].icon, 'icon-img icon-inline')}${EVOLVED_WEAPONS[evo.evolvesTo].name}に進化</div>` : ''}
         </div>`;
       container.appendChild(div);
+      appendPreviewCanvas(div, (canvas) => mountWeaponPreview(canvas, id));
     }
   } else if (category === 'passives') {
     for (const id in PASSIVES) {
@@ -252,11 +276,11 @@ export function renderCompendium(container, category) {
       const div = document.createElement('div');
       div.className = 'comp-item';
       div.innerHTML = `
-        <div class="cicon">${def.icon}</div>
+        <div class="cicon">${iconTag(id, def.icon)}</div>
         <div class="cinfo">
           <div class="cname">${def.name}<span class="clevel">最大Lv.${def.maxLevel}</span></div>
           <div class="cdesc">${def.desc}</div>
-          ${usedIn ? `<div class="crecipe">🔗 ${WEAPONS[usedIn.weapon].icon}${WEAPONS[usedIn.weapon].name}の進化素材</div>` : ''}
+          ${usedIn ? `<div class="crecipe">🔗 ${iconTag(usedIn.weapon, WEAPONS[usedIn.weapon].icon, 'icon-img icon-inline')}${WEAPONS[usedIn.weapon].name}の進化素材</div>` : ''}
         </div>`;
       container.appendChild(div);
     }
@@ -266,11 +290,11 @@ export function renderCompendium(container, category) {
       const div = document.createElement('div');
       div.className = 'comp-item evolved';
       div.innerHTML = `
-        <div class="cicon">${e.icon}</div>
+        <div class="cicon">${iconTag(pair.evolvesTo, e.icon)}</div>
         <div class="cinfo">
           <div class="cname">${e.name}</div>
           <div class="cdesc">${e.desc}</div>
-          <div class="crecipe">${w.icon}${w.name}(最大Lv.${w.maxLevel}) ＋ ${p.icon}${p.name}(最大Lv.${p.maxLevel}) を両方揃えて宝箱を開けると進化</div>
+          <div class="crecipe">${iconTag(pair.weapon, w.icon, 'icon-img icon-inline')}${w.name}(最大Lv.${w.maxLevel}) ＋ ${iconTag(pair.passive, p.icon, 'icon-img icon-inline')}${p.name}(最大Lv.${p.maxLevel}) を両方揃えて宝箱を開けると進化</div>
         </div>`;
       container.appendChild(div);
     }
@@ -278,18 +302,19 @@ export function renderCompendium(container, category) {
     for (const costume of COSTUMES) {
       const header = document.createElement('div');
       header.className = 'compendium-costume-header';
-      header.textContent = `${costume.icon} ${costume.name}`;
+      header.innerHTML = `${iconTag(costume.id, costume.icon, 'icon-img icon-inline')} ${costume.name}`;
       container.appendChild(header);
       for (const def of CHARACTER_SKILLS[costume.id] || []) {
         const div = document.createElement('div');
         div.className = 'comp-item kind-skill';
         div.innerHTML = `
-          <div class="cicon">${def.icon}</div>
+          <div class="cicon">${iconTag(def.id, def.icon)}</div>
           <div class="cinfo">
             <div class="cname">${def.name}<span class="clevel">最大Lv.${def.maxLevel}</span></div>
             <div class="cdesc">${def.desc}</div>
           </div>`;
         container.appendChild(div);
+        appendPreviewCanvas(div, (canvas) => mountSkillPreview(canvas, def));
       }
     }
   }
@@ -312,19 +337,19 @@ export function renderLoadout(container, player) {
     const branchDef = w.branch ? BRANCH_DEFS[w.branch] : null;
     let recipeHtml = '';
     if (branchDef) {
-      recipeHtml += `<div class="crecipe">${branchDef.icon} 特化: ${branchDef.name} - ${branchDef.desc}</div>`;
+      recipeHtml += `<div class="crecipe">${iconTag(w.branch, branchDef.icon, 'icon-img icon-inline')} 特化: ${branchDef.name} - ${branchDef.desc}</div>`;
     } else if (!w.evolved && BRANCHABLE_WEAPONS.includes(w.id)) {
       recipeHtml += `<div class="crecipe">🔱 最大Lvで宝箱を開けると武器特化(麻痺/毒/爆発/会心)を選択可能</div>`;
     }
     if (!w.evolved) {
       const evo = EVOLUTION_PAIRS.find(p => p.weapon === w.id);
-      if (evo) recipeHtml += `<div class="crecipe">🔗 最大Lv + ${PASSIVES[evo.passive].icon}${PASSIVES[evo.passive].name}(最大Lv)で進化 → ${EVOLVED_WEAPONS[evo.evolvesTo].icon}${EVOLVED_WEAPONS[evo.evolvesTo].name}</div>`;
+      if (evo) recipeHtml += `<div class="crecipe">🔗 最大Lv + ${iconTag(evo.passive, PASSIVES[evo.passive].icon, 'icon-img icon-inline')}${PASSIVES[evo.passive].name}(最大Lv)で進化 → ${iconTag(evo.evolvesTo, EVOLVED_WEAPONS[evo.evolvesTo].icon, 'icon-img icon-inline')}${EVOLVED_WEAPONS[evo.evolvesTo].name}</div>`;
     } else if (!w.superEvolved) {
       const superEvo = SUPER_EVOLUTION_PAIRS.find(p => p.weapon === w.id);
-      if (superEvo) recipeHtml += `<div class="crecipe">🌟 ${PASSIVES[superEvo.passive].icon}${PASSIVES[superEvo.passive].name}(最大Lv) + Lv.${superEvo.minLevel}到達で超進化 → ${SUPER_EVOLVED_WEAPONS[superEvo.evolvesTo].icon}${SUPER_EVOLVED_WEAPONS[superEvo.evolvesTo].name}</div>`;
+      if (superEvo) recipeHtml += `<div class="crecipe">🌟 ${iconTag(superEvo.passive, PASSIVES[superEvo.passive].icon, 'icon-img icon-inline')}${PASSIVES[superEvo.passive].name}(最大Lv) + Lv.${superEvo.minLevel}到達で超進化 → ${iconTag(superEvo.evolvesTo, SUPER_EVOLVED_WEAPONS[superEvo.evolvesTo].icon, 'icon-img icon-inline')}${SUPER_EVOLVED_WEAPONS[superEvo.evolvesTo].name}</div>`;
     }
     div.innerHTML = `
-      <div class="cicon">${def.icon}</div>
+      <div class="cicon">${iconTag(w.id, def.icon)}</div>
       <div class="cinfo">
         <div class="cname">${def.name}<span class="clevel">${levelLabel}</span></div>
         <div class="cdesc">${def.desc}</div>
@@ -337,7 +362,7 @@ export function renderLoadout(container, player) {
     const div = document.createElement('div');
     div.className = 'comp-item';
     div.innerHTML = `
-      <div class="cicon">${def.icon}</div>
+      <div class="cicon">${iconTag(p.id, def.icon)}</div>
       <div class="cinfo">
         <div class="cname">${def.name}<span class="clevel">Lv.${p.level}/${def.maxLevel}</span></div>
         <div class="cdesc">${def.desc}</div>
@@ -355,7 +380,7 @@ export function renderLoadout(container, player) {
       const div = document.createElement('div');
       div.className = 'comp-item kind-skill';
       div.innerHTML = `
-        <div class="cicon">${def.icon}</div>
+        <div class="cicon">${iconTag(s.id, def.icon)}</div>
         <div class="cinfo">
           <div class="cname">${def.name}<span class="clevel">Lv.${s.level}/${def.maxLevel}</span></div>
           <div class="cdesc">${def.desc}</div>
@@ -391,9 +416,9 @@ export function renderCostumeList(container, detail, selectedId, onSelect) {
     const card = document.createElement('div');
     card.className = 'costume-card' + (c.id === selectedId ? ' selected' : '');
     card.innerHTML = `
-      <div class="costume-swatch" style="background:${c.color}22;border:2px solid ${c.color};">${c.icon}</div>
+      <div class="costume-swatch" style="background:${c.color}22;border:2px solid ${c.color};">${iconTag(c.id, c.icon)}</div>
       <div class="cname">${c.name}</div>
-      <div class="cweapon">${WEAPONS[c.weaponId].icon} ${WEAPONS[c.weaponId].name}</div>
+      <div class="cweapon">${iconTag(c.weaponId, WEAPONS[c.weaponId].icon, 'icon-img icon-inline')} ${WEAPONS[c.weaponId].name}</div>
     `;
     card.onclick = () => onSelect(c.id);
     container.appendChild(card);
@@ -415,7 +440,7 @@ export function renderShop(listEl, coinsEl) {
     const row = document.createElement('div');
     row.className = 'shop-item' + (maxed ? ' maxed' : '');
     row.innerHTML = `
-      <div class="sicon">${def.icon}</div>
+      <div class="sicon">${iconTag(id, def.icon)}</div>
       <div class="sinfo">
         <div class="sname">${def.name}</div>
         <div class="sdesc">${def.desc}</div>
