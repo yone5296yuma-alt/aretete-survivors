@@ -224,9 +224,38 @@
     <button class="mini-btn" id="btn-toggle-skeleton" style="width:100%;padding:10px;margin-top:12px;">🦴 骨格編集モードにする</button>
     <div class="btn-row" style="margin-top:8px;" id="skeleton-controls" hidden>
       <button class="mini-btn" id="btn-reset-skeleton">↺ 骨格をリセット</button>
+      <button class="mini-btn" id="btn-part-highlight">🎨 パーツ表示</button>
     </div>
-    <div class="hint" id="skeleton-hint" style="margin-top:6px;" hidden>関節(点)をドラッグしてキャラの体に合わせてください。合わせ終わったら下のボタンでモーションを生成できます。</div>
-    <button class="btn btn-primary" id="btn-gen-motions" style="margin-top:10px;">🪄 骨格からモーションを生成</button>
+    <div class="hint" id="skeleton-hint" style="margin-top:6px;" hidden>関節(点)をドラッグしてキャラの体に合わせてください。合わせ終わったら下のボタンでモーションを生成できます。「🎨 パーツ表示」でどのピクセルがどの部位(骨)に属しているか色分け確認できます。</div>
+    <button class="btn btn-primary" id="btn-gen-motions" style="margin-top:10px;">🪄 骨格からモーションを生成(既定5種+カスタム)</button>
+
+    <label style="font-size:0.85rem;color:var(--gold);font-weight:700;margin-top:16px;display:block;">🕺 カスタムモーション作成</label>
+    <p class="hint" style="margin-top:2px;">骨格編集で体に合わせたあと、この下のモードで実際に関節をドラッグしてポーズを作り、キーフレームとして保存すると、既定の5モーション以外の独自モーション(特技・勝利ポーズなど)を作成できます。</p>
+    <button class="mini-btn" id="btn-toggle-pose" style="width:100%;padding:10px;margin-top:8px;">🕺 モーション作成モードにする</button>
+    <div id="pose-controls" hidden>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="mini-btn" id="btn-pose-reset">↺ ポーズをリセット</button>
+        <button class="mini-btn" id="btn-keyframe-add">➕ キーフレームに追加</button>
+      </div>
+      <div class="hint" style="margin-top:6px;">関節をドラッグしてポーズを作り、「➕ キーフレームに追加」で記録します。2つ以上のキーフレームを追加してください(開始と終了の姿勢が最低限必要です)。</div>
+      <div id="keyframe-strip" class="btn-row" style="margin-top:8px;flex-wrap:wrap;gap:6px;"></div>
+      <div class="field" style="margin-top:10px;">
+        <label>モーション名 / フレーム数 / FPS</label>
+        <div class="btn-row">
+          <input type="text" id="motion-clip-name" placeholder="例: skill1" style="flex:1;min-width:80px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:var(--text-light);">
+          <input type="number" id="motion-clip-frames" value="8" min="2" max="24" style="width:56px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:var(--text-light);">
+          <input type="number" id="motion-clip-fps" value="10" min="1" max="30" style="width:56px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:var(--text-light);">
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:0.78rem;color:#cfe3ff;">
+          <input type="checkbox" id="motion-clip-loop" checked style="width:auto;"> ループ再生する
+        </label>
+      </div>
+      <div class="btn-row" style="margin-top:8px;justify-content:center;">
+        <canvas id="custom-motion-preview" width="96" height="96" style="image-rendering:pixelated;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:#0b1a12;"></canvas>
+      </div>
+      <button class="btn" id="btn-custom-clip-save" style="margin-top:10px;">💾 このモーションを保存</button>
+      <div id="custom-clips-list" style="margin-top:8px;"></div>
+    </div>
     <div class="btn-row" style="margin-top:10px;justify-content:center;" id="anim-preview-row" hidden>
       <canvas id="anim-preview" width="96" height="96" style="image-rendering:pixelated;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:#0b1a12;"></canvas>
     </div>
@@ -307,6 +336,33 @@ BONE_DEFS.forEach((bd, i) => { PARENT_BONE_OF[bd.b] = i; });
 let skeletonMode = false;
 let joints = null; // { jointName: {x, y} } in grid-cell space (fractional allowed)
 let draggingJoint = null;
+let partHighlightOn = false;
+
+// ---------------------------------------------------------------------------
+// Custom motion authoring: unlike skeletonMode (which edits REST joint
+// positions), poseMode drags rotate bones from their current posed position -
+// each drag recomputes an absolute target angle for the dragged joint's bone
+// (see poseFromAngles) so what you see while dragging is a genuine live pose,
+// not the rest rig. Captured poses become keyframes; keyframeFrames() (used
+// by generateAllMotions below for the same interpolation) turns a keyframe
+// list into a full clip, merged alongside the 5 preset clips on export.
+// ---------------------------------------------------------------------------
+let poseMode = false;
+let poseBind = null; // bindPixelsToSkeleton() result, computed once per pose-mode session
+let currentPoseAngles = {}; // boneName -> absolute angle in degrees
+let customKeyframes = []; // list of deltas objects (poseFromAngles output)
+let customClips = []; // list of {name, fps, loop, frameCount, keyframes}
+let customPreviewRAF = null;
+
+// Shared per-frame finishing pipeline (posed grid -> gap-filled, connected
+// result) - used identically by the 5 preset generators and by custom clips,
+// and reused live while dragging in poseMode for instant feedback.
+function finishFrame(g, n, restJoints, bind, deltas) {
+  const frame = renderPoseFrame(g, n, restJoints, bind, deltas);
+  connectJoints(frame, n, solvePose(restJoints, deltas), bind);
+  const patched = fillSmallGaps(frame, n, restJoints, deltas, bind);
+  return bridgeDisconnectedIslands(patched, n);
+}
 
 // A drawn character rarely starts in a neutral "arms at sides" pose - the
 // motion generator applies rotation *deltas* on top of whatever rest pose
@@ -355,19 +411,20 @@ function buildJoints(n, presetKey) {
 function defaultJoints(n) { return buildJoints(n, 'standing'); }
 
 function drawSkeletonOverlay() {
-  if (!skeletonMode || !joints) return;
+  if ((!skeletonMode && !poseMode) || !joints) return;
+  const displayJoints = poseMode ? solvePose(joints, poseFromAngles(joints, currentPoseAngles)) : joints;
   ctx.save();
   ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(94,200,255,0.9)';
+  ctx.strokeStyle = poseMode ? 'rgba(255,215,106,0.9)' : 'rgba(94,200,255,0.9)';
   for (const bd of BONE_DEFS) {
-    const A = joints[bd.a], B = joints[bd.b];
+    const A = displayJoints[bd.a], B = displayJoints[bd.b];
     ctx.beginPath();
     ctx.moveTo(A.x * cellPx, A.y * cellPx);
     ctx.lineTo(B.x * cellPx, B.y * cellPx);
     ctx.stroke();
   }
-  for (const name in joints) {
-    const j = joints[name];
+  for (const name in displayJoints) {
+    const j = displayJoints[name];
     ctx.beginPath();
     ctx.arc(j.x * cellPx, j.y * cellPx, 6, 0, Math.PI * 2);
     ctx.fillStyle = name === draggingJoint ? '#ffd76a' : '#ffffff';
@@ -381,9 +438,10 @@ function drawSkeletonOverlay() {
 
 function jointAtCanvasPos(px, py) {
   if (!joints) return null;
+  const searchJoints = poseMode ? solvePose(joints, poseFromAngles(joints, currentPoseAngles)) : joints;
   let best = null, bestD = 14; // px hit-radius in canvas space
-  for (const name in joints) {
-    const j = joints[name];
+  for (const name in searchJoints) {
+    const j = searchJoints[name];
     const d = Math.hypot(j.x * cellPx - px, j.y * cellPx - py);
     if (d < bestD) { bestD = d; best = name; }
   }
@@ -413,14 +471,31 @@ function resizeCanvasElement() {
   canvas.height = gridSize * cellPx;
 }
 
+// Flat, high-contrast colors keyed by bone index, for the パーツ表示 overlay.
+const PART_COLORS = ['#ff5a5a', '#ffb347', '#ffe45a', '#7fe66a', '#5ec8ff', '#9fb8ff', '#c76bd6', '#ff8fc7', '#e8703f', '#5fbf7a'];
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const displayGrid = (poseMode && poseBind) ? finishFrame(grid, gridSize, joints, poseBind, poseFromAngles(joints, currentPoseAngles)) : grid;
+  // Only meaningful against the REST grid - a posed frame's pixels have moved
+  // to different (x,y) than bindPixelsToSkeleton computed for, so highlight
+  // is only shown outside poseMode (skeleton rest-editing, where it's needed).
+  const highlightBind = (partHighlightOn && joints && !poseMode) ? bindPixelsToSkeleton(grid, gridSize, joints) : null;
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
-      const c = grid[y][x];
+      const c = displayGrid[y][x];
       if (c) {
         ctx.fillStyle = c;
         ctx.fillRect(x * cellPx, y * cellPx, cellPx, cellPx);
+        if (highlightBind) {
+          const b = highlightBind.map[y][x];
+          if (b) {
+            ctx.fillStyle = PART_COLORS[b.bone % PART_COLORS.length];
+            ctx.globalAlpha = 0.45;
+            ctx.fillRect(x * cellPx, y * cellPx, cellPx, cellPx);
+            ctx.globalAlpha = 1;
+          }
+        }
       }
     }
   }
@@ -596,6 +671,7 @@ document.querySelectorAll('[data-size]').forEach(btn => {
   btn.onclick = () => {
     const n = Number(btn.dataset.size);
     if (grid && grid.some(row => row.some(c => c)) && !confirm('キャンバスサイズを変更すると絵の一部が消える場合があります。続けますか？')) return;
+    if (poseMode) togglePoseMode(false); // poseBind was built for the old grid size
     document.querySelectorAll('[data-size]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     pushUndo();
@@ -613,7 +689,7 @@ $('zoom-slider').addEventListener('input', (e) => {
 // ---- drawing interaction (skeleton-drag takes over the canvas while active) ----
 function pointerDown(e) {
   e.preventDefault();
-  if (skeletonMode) {
+  if (skeletonMode || poseMode) {
     const { px, py } = canvasPosFromEvent(e);
     draggingJoint = jointAtCanvasPos(px, py);
     draw();
@@ -632,6 +708,21 @@ function pointerMove(e) {
     const { px, py } = canvasPosFromEvent(e);
     joints[draggingJoint].x = clampNum(px / cellPx, 0, gridSize);
     joints[draggingJoint].y = clampNum(py / cellPx, 0, gridSize);
+    draw();
+    return;
+  }
+  if (poseMode) {
+    if (!draggingJoint) return;
+    e.preventDefault();
+    const boneIdx = PARENT_BONE_OF[draggingJoint];
+    if (boneIdx !== undefined) {
+      const bd = BONE_DEFS[boneIdx];
+      const { px, py } = canvasPosFromEvent(e);
+      const world = solvePose(joints, poseFromAngles(joints, currentPoseAngles));
+      const A = world[bd.a];
+      const angleDeg = (Math.atan2(py / cellPx - A.y, px / cellPx - A.x) * 180) / Math.PI;
+      currentPoseAngles[bd.name] = angleDeg;
+    }
     draw();
     return;
   }
@@ -1022,6 +1113,7 @@ $('btn-cutout-confirm').onclick = () => {
 // Rotating the skeleton genuinely drags the art with it.
 // ---------------------------------------------------------------------------
 function toggleSkeletonMode(on) {
+  if (on && poseMode) togglePoseMode(false);
   skeletonMode = on;
   if (on && !joints) joints = defaultJoints(gridSize);
   $('btn-toggle-skeleton').classList.toggle('active', on);
@@ -1035,6 +1127,117 @@ $('btn-reset-skeleton').onclick = () => {
   if (!confirm('骨格を初期位置に戻しますか？')) return;
   joints = defaultJoints(gridSize);
   draw();
+};
+$('btn-part-highlight').onclick = () => {
+  partHighlightOn = !partHighlightOn;
+  $('btn-part-highlight').classList.toggle('active', partHighlightOn);
+  draw();
+};
+
+// ---- custom motion authoring (poseMode) ----
+function togglePoseMode(on) {
+  if (!joints) { alert('先に「🦴 骨格編集モードにする」で骨格をキャラに合わせてください。'); return; }
+  if (on && skeletonMode) toggleSkeletonMode(false);
+  poseMode = on;
+  poseBind = on ? bindPixelsToSkeleton(grid, gridSize, joints) : null;
+  if (!on) { draggingJoint = null; }
+  $('btn-toggle-pose').classList.toggle('active', on);
+  $('btn-toggle-pose').textContent = on ? '🕺 モーション作成モードを終了' : '🕺 モーション作成モードにする';
+  $('pose-controls').hidden = !on;
+  draw();
+}
+$('btn-toggle-pose').onclick = () => togglePoseMode(!poseMode);
+$('btn-pose-reset').onclick = () => {
+  currentPoseAngles = {};
+  draw();
+};
+
+function renderKeyframeStrip() {
+  const strip = $('keyframe-strip');
+  strip.innerHTML = '';
+  customKeyframes.forEach((deltas, i) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;';
+    const c = document.createElement('canvas');
+    c.width = 48; c.height = 48;
+    c.style.cssText = 'image-rendering:pixelated;border-radius:6px;border:1px solid rgba(255,255,255,0.25);background:#0b1a12;';
+    const frame = finishFrame(grid, gridSize, joints, poseBind, deltas);
+    drawGridToCtx(c.getContext('2d'), frame, gridSize, 48);
+    const del = document.createElement('button');
+    del.className = 'mini-btn';
+    del.style.cssText = 'font-size:0.65rem;padding:2px 6px;';
+    del.textContent = `✕ ${i + 1}`;
+    del.onclick = () => { customKeyframes.splice(i, 1); renderKeyframeStrip(); };
+    wrap.appendChild(c);
+    wrap.appendChild(del);
+    strip.appendChild(wrap);
+  });
+}
+
+$('btn-keyframe-add').onclick = () => {
+  customKeyframes.push(poseFromAngles(joints, currentPoseAngles));
+  renderKeyframeStrip();
+  startCustomPreview();
+};
+
+function startCustomPreview() {
+  if (customPreviewRAF) cancelAnimationFrame(customPreviewRAF);
+  if (customKeyframes.length < 2) return;
+  const pctx = $('custom-motion-preview').getContext('2d');
+  pctx.imageSmoothingEnabled = false;
+  const frameCount = Math.max(2, Math.min(24, Number($('motion-clip-frames').value) || 8));
+  const fps = Math.max(1, Number($('motion-clip-fps').value) || 10);
+  const frames = keyframeFrames(customKeyframes, frameCount).map(deltas => finishFrame(grid, gridSize, joints, poseBind, deltas));
+  const t0 = performance.now();
+  function tick(now) {
+    const idx = Math.floor(((now - t0) / 1000) * fps) % frames.length;
+    drawGridToCtx(pctx, frames[idx], gridSize, 96);
+    customPreviewRAF = requestAnimationFrame(tick);
+  }
+  customPreviewRAF = requestAnimationFrame(tick);
+}
+$('motion-clip-frames').addEventListener('change', startCustomPreview);
+$('motion-clip-fps').addEventListener('change', startCustomPreview);
+
+function renderCustomClipsList() {
+  const list = $('custom-clips-list');
+  list.innerHTML = '';
+  customClips.forEach((clip, i) => {
+    const row = document.createElement('div');
+    row.className = 'btn-row';
+    row.style.cssText = 'margin-top:4px;align-items:center;';
+    const label = document.createElement('span');
+    label.style.cssText = 'font-size:0.78rem;color:#cfe3ff;flex:1;';
+    label.textContent = `🎬 ${clip.name} (${clip.keyframes.length}キーフレーム / ${clip.fps}fps${clip.loop ? ' / ループ' : ''})`;
+    const del = document.createElement('button');
+    del.className = 'mini-btn';
+    del.textContent = '削除';
+    del.onclick = () => { customClips.splice(i, 1); renderCustomClipsList(); };
+    row.appendChild(label);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+$('btn-custom-clip-save').onclick = () => {
+  if (customKeyframes.length < 2) { alert('キーフレームを2つ以上追加してください(開始と終了の姿勢が最低限必要です)。'); return; }
+  let name = ($('motion-clip-name').value.trim() || `custom${customClips.length + 1}`).replace(/[^a-zA-Z0-9_]/g, '');
+  if (!name) name = `custom${customClips.length + 1}`;
+  const reserved = new Set([...CLIP_NAMES, ...customClips.map(c => c.name)]);
+  let uniqueName = name, suffix = 2;
+  while (reserved.has(uniqueName)) { uniqueName = `${name}${suffix++}`; }
+  customClips.push({
+    name: uniqueName,
+    fps: Math.max(1, Number($('motion-clip-fps').value) || 10),
+    loop: $('motion-clip-loop').checked,
+    frameCount: Math.max(2, Math.min(24, Number($('motion-clip-frames').value) || 8)),
+    keyframes: customKeyframes.slice(),
+  });
+  customKeyframes = [];
+  $('motion-clip-name').value = '';
+  renderKeyframeStrip();
+  renderCustomClipsList();
+  if (customPreviewRAF) { cancelAnimationFrame(customPreviewRAF); customPreviewRAF = null; }
 };
 
 function rotateVec(v, deg) {
@@ -1495,14 +1698,20 @@ function generateAllMotions() {
   for (const clipName of CLIP_NAMES) {
     const meta = CLIP_META[clipName];
     const deltasList = meta.gen(restSnapshot, meta.count);
-    const localFrames = deltasList.map(deltas => {
-      const frame = renderPoseFrame(grid, n, restSnapshot, bind, deltas);
-      connectJoints(frame, n, solvePose(restSnapshot, deltas), bind);
-      const patched = fillSmallGaps(frame, n, restSnapshot, deltas, bind);
-      return bridgeDisconnectedIslands(patched, n);
-    });
+    const localFrames = deltasList.map(deltas => finishFrame(grid, n, restSnapshot, bind, deltas));
     frames.push(...localFrames);
     clips[clipName] = { frames: localFrames.map((_, i) => i + offset), fps: meta.fps, loop: meta.loop };
+    offset += localFrames.length;
+  }
+  // Custom clips authored via poseMode (see togglePoseMode/btn-custom-clip-save)
+  // merge onto the same shared sheet/manifest - no changes needed downstream
+  // (assets.js's tryLoadAnim reads whatever clip names the manifest has).
+  for (const clip of customClips) {
+    if (clip.keyframes.length < 2) continue;
+    const deltasList = keyframeFrames(clip.keyframes, clip.frameCount);
+    const localFrames = deltasList.map(deltas => finishFrame(grid, n, restSnapshot, bind, deltas));
+    frames.push(...localFrames);
+    clips[clip.name] = { frames: localFrames.map((_, i) => i + offset), fps: clip.fps, loop: clip.loop };
     offset += localFrames.length;
   }
   generatedFrames = frames;
@@ -1511,6 +1720,22 @@ function generateAllMotions() {
   $('anim-preview-row').hidden = false;
   $('anim-preview-controls').hidden = false;
   $('btn-download-sheet').disabled = false;
+  const controls = $('anim-preview-controls');
+  controls.querySelectorAll('[data-custom-clip]').forEach(b => b.remove());
+  for (const clip of customClips) {
+    if (!clips[clip.name]) continue;
+    const btn = document.createElement('button');
+    btn.className = 'mini-btn';
+    btn.dataset.clip = clip.name;
+    btn.dataset.customClip = '1';
+    btn.textContent = `🎬 ${clip.name}`;
+    btn.onclick = () => {
+      previewClip = clip.name;
+      document.querySelectorAll('[data-clip]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    controls.appendChild(btn);
+  }
   startPreview();
 }
 
