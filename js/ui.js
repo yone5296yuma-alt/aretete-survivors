@@ -303,6 +303,27 @@ export function renderCompendium(container, category) {
           <div class="crecipe">${iconTag(pair.weapon, w.icon, 'icon-img icon-inline')}${w.name}(最大Lv.${w.maxLevel}) ＋ ${iconTag(pair.passive, p.icon, 'icon-img icon-inline')}${p.name}(最大Lv.${p.maxLevel}) を両方揃えて宝箱を開けると進化</div>
         </div>`;
       container.appendChild(div);
+      appendPreviewCanvas(div, (canvas) => mountWeaponPreview(canvas, pair.evolvesTo));
+    }
+    if (SUPER_EVOLUTION_PAIRS.length) {
+      const header = document.createElement('div');
+      header.className = 'compendium-costume-header';
+      header.textContent = '🌟 超進化レシピ';
+      container.appendChild(header);
+      for (const pair of SUPER_EVOLUTION_PAIRS) {
+        const w = EVOLVED_WEAPONS[pair.weapon], p = PASSIVES[pair.passive], e = SUPER_EVOLVED_WEAPONS[pair.evolvesTo];
+        const div = document.createElement('div');
+        div.className = 'comp-item evolved';
+        div.innerHTML = `
+          <div class="cicon">${iconTag(pair.evolvesTo, e.icon)}</div>
+          <div class="cinfo">
+            <div class="cname">${e.name}</div>
+            <div class="cdesc">${e.desc}</div>
+            <div class="crecipe">${iconTag(pair.weapon, w.icon, 'icon-img icon-inline')}${w.name}(進化済) ＋ ${iconTag(pair.passive, p.icon, 'icon-img icon-inline')}${p.name}(最大Lv.${p.maxLevel}) ＋ プレイヤーLv.${pair.minLevel}以上で宝箱を開けると超進化</div>
+          </div>`;
+        container.appendChild(div);
+        appendPreviewCanvas(div, (canvas) => mountWeaponPreview(canvas, pair.evolvesTo));
+      }
     }
   } else if (category === 'skills') {
     for (const costume of COSTUMES) {

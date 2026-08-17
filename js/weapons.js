@@ -35,11 +35,13 @@ function nearestEnemy(x, y, enemies, maxRange = Infinity) {
   return best;
 }
 
-// Canvas fillText renders emoji as flat monochrome silhouettes on some
-// platforms (notably Safari) instead of full color glyphs, so every weapon
-// visual gets its own colored backdrop disc drawn first - the projectile
-// stays clearly visible and color-coded even where the emoji itself doesn't
-// render in color. Evolved (aura:true) weapons get an extra glowing ring.
+// Real pixel-art icons (see js/icons.js) draw as the weapon's actual sprite -
+// no backdrop needed, they're already opaque art. The colored disc + dark
+// stroke below is a fallback ONLY for the pre-icon emoji path: canvas
+// fillText renders emoji as flat monochrome silhouettes on some platforms
+// (notably Safari) instead of full color glyphs, so that path still needs
+// its own colored backdrop to stay visible/color-coded. Evolved (aura:true)
+// weapons get an extra glowing ring either way.
 function drawIconBadge(ctx, radius, color, icon, aura, spinT, iconId) {
   if (aura) {
     const pulse = 0.5 + 0.5 * Math.sin(spinT * 6);
@@ -52,18 +54,22 @@ function drawIconBadge(ctx, radius, color, icon, aura, spinT, iconId) {
     ctx.stroke();
     ctx.restore();
   }
-  ctx.beginPath();
-  ctx.arc(0, 0, radius, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = 'rgba(20,15,10,0.8)';
-  ctx.stroke();
   const iconImg = iconId ? getIconImg(iconId) : null;
   if (iconImg && iconImg.loaded) {
-    const d = radius * 1.6;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 3;
+    const d = radius * 2.1;
     ctx.drawImage(iconImg.img, -d / 2, -d / 2, d, d);
+    ctx.restore();
   } else {
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(20,15,10,0.8)';
+    ctx.stroke();
     ctx.font = `${Math.round(radius * 1.5)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

@@ -142,6 +142,7 @@ $('tab-comp-weapons').onclick = () => { compendiumTab = 'weapons'; refreshCompen
 $('tab-comp-passives').onclick = () => { compendiumTab = 'passives'; refreshCompendium(); };
 $('tab-comp-evo').onclick = () => { compendiumTab = 'evolution'; refreshCompendium(); };
 $('tab-comp-skills').onclick = () => { compendiumTab = 'skills'; refreshCompendium(); };
+$('btn-howto-evolution').onclick = () => { compendiumTab = 'evolution'; refreshCompendium(); show('screen-compendium'); };
 
 $('btn-confirm-stage').onclick = () => {
   refreshCostumeUI();
