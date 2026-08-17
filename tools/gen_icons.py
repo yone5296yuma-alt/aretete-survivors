@@ -58,6 +58,34 @@ def circle(draw, cx, cy, r, color):
     draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=color)
 
 
+def apply_bevel_shading(canvas):
+    """Fake light-from-upper-left shading: darken the lower-right rim of the
+    silhouette, lighten the upper-left rim, so flat-filled primitives read as
+    a soft bevel instead of a single flat color. Same coarse-grid alpha-
+    neighbor technique as the outline pass below, applied before it runs."""
+    px = canvas.load()
+    shaded = canvas.copy()
+    spx = shaded.load()
+    for y in range(COARSE):
+        for x in range(COARSE):
+            r, g, b, a = px[x, y]
+            if a <= 40:
+                continue
+            shadow_edge = any(
+                nx >= COARSE or ny >= COARSE or px[nx, ny][3] <= 40
+                for nx, ny in ((x + 1, y), (x, y + 1), (x + 1, y + 1))
+            )
+            highlight_edge = any(
+                nx < 0 or ny < 0 or px[nx, ny][3] <= 40
+                for nx, ny in ((x - 1, y), (x, y - 1), (x - 1, y - 1))
+            )
+            if shadow_edge and not highlight_edge:
+                spx[x, y] = darken((r, g, b, a), 35)
+            elif highlight_edge and not shadow_edge:
+                spx[x, y] = lighten((r, g, b, a), 35)
+    return shaded
+
+
 def outline_and_upscale(canvas):
     """1px (coarse-grid) dark outline around the alpha silhouette, then
     nearest-neighbor upscale for a crisp blocky look."""
@@ -443,6 +471,7 @@ def render_icon(primitive_name, color_hex, embellish=None):
             rad = math.radians(a)
             x, y = 10 + 9.5 * math.cos(rad), 10 + 9.5 * math.sin(rad)
             circle(draw, x, y, 0.8, lighten(color, 60))
+    canvas = apply_bevel_shading(canvas)
     return outline_and_upscale(canvas)
 
 
