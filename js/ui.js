@@ -10,6 +10,12 @@ import { mountWeaponPreview, mountSkillPreview } from './preview.js';
 
 const $ = (id) => document.getElementById(id);
 
+// Nicknames are free-form user text rendered via innerHTML (renderLeaderboard) -
+// escape before interpolating so a crafted nickname can't inject markup.
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function weaponDef(id) {
   return WEAPONS[id] || EVOLVED_WEAPONS[id] || SUPER_EVOLVED_WEAPONS[id];
 }
@@ -487,6 +493,7 @@ export function renderLeaderboard(container, entries) {
   container.innerHTML = entries.map((e, i) => `
     <div class="rank-row">
       <span class="rank-pos">${i + 1}</span>
+      <span class="rank-name">${escapeHtml(e.name || e.username || '名無し')}</span>
       <span class="rank-time">${fmtTime(e.time)}</span>
       <span class="rank-meta">Lv.${e.level} / ${e.kills}体撃破 / ${e.costume}</span>
     </div>

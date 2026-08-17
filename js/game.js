@@ -5,7 +5,7 @@ import { updateHUD, buildUpgradeChoices, showLevelUp, showEvolveNotice, showResu
 import { ENEMY_TYPES } from './data.js';
 import { dist, clamp, randRange, pick, weightedPick } from './utils.js';
 import { SFX } from './audio.js';
-import { markStageCleared, addLeaderboardEntry, addCoins } from './storage.js';
+import { markStageCleared, addLeaderboardEntry, addCoins, getNickname } from './storage.js';
 import { tryLoadImage } from './assets.js';
 import { submitOnlineLeaderboard, syncLocalToCloud } from './api.js';
 
@@ -845,6 +845,7 @@ export class Game {
     } else if (this.mode === 'endless') {
       const myDate = Date.now();
       const board = addLeaderboardEntry({
+        name: getNickname() || '名無し',
         time: this.elapsed, level: this.player.level, kills: this.kills,
         costume: this.player.costume.name, date: myDate,
       });

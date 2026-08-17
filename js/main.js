@@ -2,7 +2,7 @@ import { COSTUMES, STAGES, ENDLESS_CONFIG, registerCustomEnemies } from './data.
 import { renderStageList, renderCostumeList, renderLeaderboard, renderShop, renderCompendium, disposeCompendiumPreviews } from './ui.js';
 import { Game } from './game.js';
 import { unlockAudio } from './audio.js';
-import { getLeaderboard, getHandedness, setHandedness, getCoins } from './storage.js';
+import { getLeaderboard, getHandedness, setHandedness, getCoins, getNickname, setNickname } from './storage.js';
 import * as api from './api.js';
 
 const $ = (id) => document.getElementById(id);
@@ -80,7 +80,13 @@ function refreshAccountUI() {
   $('account-logged-in').classList.toggle('hidden', !loggedIn);
   if (loggedIn) $('account-current-username').textContent = api.getUsername() || '';
   $('account-error').classList.add('hidden');
+  $('account-nickname-input').value = getNickname();
 }
+$('btn-nickname-save').onclick = () => {
+  if (setNickname($('account-nickname-input').value)) {
+    $('account-nickname-input').value = getNickname();
+  }
+};
 function setAccountTab(tab) {
   accountTab = tab;
   $('tab-account-login').classList.toggle('active', tab === 'login');
@@ -171,4 +177,18 @@ $('btn-result-back').onclick = () => {
   show('screen-title');
 };
 
-show('screen-title');
+$('btn-nickname-submit').onclick = () => {
+  const errorEl = $('nickname-error');
+  if (!setNickname($('nickname-input').value)) {
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  errorEl.classList.add('hidden');
+  show('screen-title');
+};
+
+if (getNickname()) {
+  show('screen-title');
+} else {
+  show('screen-nickname');
+}

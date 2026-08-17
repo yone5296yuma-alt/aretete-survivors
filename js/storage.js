@@ -11,6 +11,7 @@ const RANK_KEY = 'aretete_endless_ranking';
 const HAND_KEY = 'aretete_handedness';
 const COINS_KEY = 'aretete_coins';
 const UPGRADES_KEY = 'aretete_permanent_upgrades';
+const NICK_KEY = 'aretete_nickname';
 
 export function getClearedStages() {
   try { return JSON.parse(localStorage.getItem(CLEAR_KEY)) || []; } catch (e) { return []; }
@@ -42,6 +43,17 @@ export function addLeaderboardEntry(entry) {
   const trimmed = list.slice(0, 20);
   try { localStorage.setItem(RANK_KEY, JSON.stringify(trimmed)); } catch (e) { /* ignore */ }
   return trimmed;
+}
+
+export function getNickname() {
+  try { return localStorage.getItem(NICK_KEY) || ''; } catch (e) { return ''; }
+}
+
+export function setNickname(name) {
+  const trimmed = (name || '').trim().slice(0, 12);
+  if (!trimmed) return false;
+  try { localStorage.setItem(NICK_KEY, trimmed); } catch (e) { /* ignore */ }
+  return true;
 }
 
 export function getHandedness() {

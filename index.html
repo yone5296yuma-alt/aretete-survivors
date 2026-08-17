@@ -9,6 +9,17 @@
 <body>
 <div id="app">
 
+  <!-- NICKNAME (first-launch gate, shown before the title screen until a nickname is set) -->
+  <section id="screen-nickname" class="screen hidden">
+    <div class="panel select-panel">
+      <h2>👋 ニックネームを入力</h2>
+      <p class="rank-note">ランキングに表示される名前です（あとでアカウント画面から変更できます）</p>
+      <input id="nickname-input" class="account-input" type="text" placeholder="ニックネーム（12文字まで）" maxlength="12" autocomplete="nickname">
+      <p id="nickname-error" class="account-error hidden">ニックネームを入力してください</p>
+      <button id="btn-nickname-submit" class="btn btn-primary">はじめる</button>
+    </div>
+  </section>
+
   <!-- TITLE SCREEN -->
   <section id="screen-title" class="screen">
     <div class="title-wrap">
@@ -119,6 +130,13 @@
   <section id="screen-account" class="screen hidden">
     <div class="panel select-panel">
       <h2>👤 アカウント</h2>
+      <div class="nickname-edit-row">
+        <label class="nickname-edit-label">🏷️ ニックネーム（ランキング表示名）</label>
+        <div class="nickname-edit-controls">
+          <input id="account-nickname-input" class="account-input" type="text" placeholder="ニックネーム（12文字まで）" maxlength="12">
+          <button id="btn-nickname-save" class="btn">保存</button>
+        </div>
+      </div>
       <div id="account-logged-out">
         <p class="rank-note">ログインすると、ランキングやコイン・強化の進行状況を他の端末とも共有できます（サーバーが起動していない場合はこの端末だけの記録のままです）</p>
         <div class="account-tabs">
