@@ -133,7 +133,7 @@ def enable_freestyle_outline(thickness=2.5, color=(0.16, 0.11, 0.09)):
 def setup_render(size):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.samples = 48
+    scene.cycles.samples = 128
     scene.render.resolution_x = size
     scene.render.resolution_y = size
     scene.render.film_transparent = True
@@ -142,15 +142,27 @@ def setup_render(size):
 
 
 def add_light():
+    # Previous version used a bright near-white world background (strength
+    # 1.1) as fill light - that's a huge ambient softbox surrounding the
+    # whole scene, which washes out the Key/Fill directional contrast and is
+    # why earlier renders read flat despite having two sun lamps. Dropping
+    # the world to a dim ambient floor and doing the actual fill/shading via
+    # a proper 3-light rig (key/fill/rim) gives real shading gradients.
     world = bpy.data.worlds.new("FlatWorld")
     world.use_nodes = True
     bg = world.node_tree.nodes.get("Background")
-    bg.inputs["Color"].default_value = (0.85, 0.86, 0.88, 1.0)
-    bg.inputs["Strength"].default_value = 1.1
+    bg.inputs["Color"].default_value = (0.65, 0.68, 0.75, 1.0)
+    bg.inputs["Strength"].default_value = 0.3
     bpy.context.scene.world = world
-    for name, energy, rot in [("Key", 1.8, (55, 0, 35)), ("Fill", 0.8, (60, 0, -140))]:
+    lights = [
+        ("Key", 3.2, (55, 0, 35)),     # main directional light, upper-front-right
+        ("Fill", 1.0, (65, 0, -140)),  # softer opposite-side fill, keeps shadows from crushing to black
+        ("Rim", 2.0, (110, 0, 200)),   # backlight for edge/silhouette separation from the background
+    ]
+    for name, energy, rot in lights:
         data = bpy.data.lights.new(name, type="SUN")
         data.energy = energy
+        data.angle = math.radians(3.0)  # small penumbra - soft but not shadowless
         obj = bpy.data.objects.new(name, data)
         bpy.context.collection.objects.link(obj)
         obj.rotation_euler = Euler((math.radians(rot[0]), math.radians(rot[1]), math.radians(rot[2])), "XYZ")
